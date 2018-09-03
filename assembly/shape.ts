@@ -1,0 +1,16 @@
+export const STRAIGHT_TB: u8 = 0;
+export const STRAIGHT_LR: u8 = 1;
+export const CROSS: u8 = 2;
+export const ELBOW_TL: u8 = 3;
+export const ELBOW_TR: u8 = 4;
+export const ELBOW_RB: u8 = 5;
+export const ELBOW_LB: u8 = 6;
+export const START_T: u8 = 7;
+export const START_B: u8 = 8;
+export const START_L: u8 = 9;
+export const START_R: u8 = 10;
+export const END_T: u8 = 11;
+export const END_B: u8 = 12;
+export const END_L: u8 = 13;
+export const END_R: u8 = 14;
+export const EMPTY: u8 = 15;

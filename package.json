@@ -1,0 +1,47 @@
+{
+  "license": "UNLICENSED",
+  "scripts": {
+    "test": "jest",
+    "serve": "http-server dist -o",
+    "build:watch": "nodemon -e ts --watch assembly --watch __tests__ --exec 'yarn build:untouched; yarn build:optimized; yarn build:unit; yarn test'",
+    "build:untouched": "asc assembly/module.ts -b dist/module.untouched.wasm --validate --sourceMap --measure --importMemory --use Math=JSMath",
+    "build:optimized": "asc assembly/module.ts -b dist/module.optimized.wasm --validate --sourceMap --measure --optimize --importMemory --use Math=JSMath",
+    "build:unit": "asc assembly/unit.ts -b dist/unit.untouched.wasm --validate --sourceMap --measure --importMemory --use Math=JSMath"
+  },
+  "jest": {
+    "moduleFileExtensions": [
+      "ts",
+      "tsx",
+      "js"
+    ],
+    "transform": {
+      "^.+\\.(ts|tsx)$": "ts-jest"
+    },
+    "roots": [
+      "__tests__"
+    ],
+    "globals": {
+      "ts-jest": {
+        "tsConfigFile": "__tests__/tsconfig.json"
+      }
+    },
+    "testMatch": [
+      "**/__tests__/*.+(ts|tsx|js)"
+    ]
+  },
+  "prettier": {
+    "printWidth": 100
+  },
+  "devDependencies": {
+    "@types/jest": "^23.3.1",
+    "assemblyscript": "AssemblyScript/assemblyscript",
+    "http-server": "^0.11.1",
+    "jest": "^23.5.0",
+    "nodemon": "^1.18.4",
+    "ts-jest": "^23.1.4",
+    "typescript": "^3.0.3"
+  },
+  "dependencies": {
+    "@types/node": "^10.9.4"
+  }
+}

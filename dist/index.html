@@ -1,0 +1,127 @@
+<style>
+	canvas {
+		position: absolute;
+		top: 60px;
+		left: 20px;
+		width: calc(100% - 40px);
+		height: calc(100% - 80px);
+		background: #100707;
+		cursor: cell;
+		user-select: none;
+	}
+</style>
+<canvas height="100" width="100"></canvas>
+<script>
+	"use strict";
+
+	// Set up the canvas with a 2D rendering context
+	var cnv = document.getElementsByTagName("canvas")[0];
+
+	var ctx = cnv.getContext("2d");
+	var bcr = cnv.getBoundingClientRect();
+
+	var width = 50;
+	var height = 50;
+	cnv.width = width;
+	cnv.height = height;
+
+	cnv.style = `
+  image-rendering: optimizeSpeed;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: -o-crisp-edges;
+  image-rendering: optimize-contrast;
+  image-rendering: crisp-edges;
+  image-rendering: pixelated;
+  -ms-interpolation-mode: nearest-neighbor;
+`;
+	ctx.imageSmoothingEnabled = false;
+
+	var size = height * width;
+	var canvasByteSize = (size + size) << 2; // 4b per pixel (X << N is the same as X * 2 ^ N)
+
+	// TODO: Update this on release to the number of bytes we expect the internal memory to take up
+	var memByteSize = 300;
+
+	var totalPages = (memByteSize + ((canvasByteSize + 0xffff) & ~0xffff)) >>> 16;
+	console.log(`Memory Allocated: ${totalPages * 6.4} KiB`);
+
+	var memory = new WebAssembly.Memory({
+		initial: totalPages
+	});
+
+	let char = 0;
+	const FLAG_UP = 1 << 1;
+	const FLAG_DOWN = 1 << 2;
+	const FLAG_LEFT = 1 << 3;
+	const FLAG_RIGHT = 1 << 4;
+
+	function charFromKey(key) {
+		switch (key) {
+			case "w":
+			case "ArrowUp":
+				return FLAG_UP;
+
+			case "s":
+			case "ArrowDown":
+				return FLAG_DOWN;
+
+			case "a":
+			case "ArrowLeft":
+				return FLAG_LEFT;
+
+			case "d":
+			case "ArrowRight":
+				return FLAG_RIGHT;
+		}
+
+		return 0;
+	}
+
+	window.addEventListener('keydown', (e) => { char = char | charFromKey(e.key); console.log(char.toString(2)) });
+	window.addEventListener('keyup', (e) => { char = char & ~charFromKey(e.key); console.log(char.toString(2)) });
+
+	var bcr = cnv.getBoundingClientRect();
+	// exports.fill((loc.clientX - bcr.left) >>> 1, (loc.clientY - bcr.top) >>> 1, 0.5);
+
+	fetch('module.untouched.wasm')
+		.then(response => response.arrayBuffer())
+		.then(bytes =>
+			WebAssembly.instantiate(
+				bytes, {
+					env: { memory: memory }, JSMath: Math,
+					console: {
+						// import as console.logi
+						logi(value) {
+							console.log("logi: " + value);
+						}
+					}
+				}
+			)
+		)
+		.then(results => {
+			const exports = results.instance.exports;
+
+			exports.setupWorld(5, 5, height, width);
+
+			var mem = new Uint32Array(memory.buffer, memByteSize);
+			(function update() {
+				// setTimeout(update, 1000 / 30); // Update about 30 times a second
+				// mem.copyWithin(memByteSize, size, size + size);      // copy output to input
+				// const result = exports.simpleRender(char);                            // perform the next step
+				// console.log(char);
+				// char = 0;
+				// console.log(mem.slice(0, 10))
+			})();
+
+			// Keep rendering the output at [size, 2*size]
+			var imageData = ctx.createImageData(width, height);
+			var argb = new Uint32Array(imageData.data.buffer);
+			(function render() {
+				// requestAnimationFrame(render);
+				exports.simpleRender(width, height);
+				argb.set(mem.subarray(0, size)); // copy output to image buffer
+				ctx.putImageData(imageData, 0, 0);         // apply image buffer
+			})();
+		});
+</script>
