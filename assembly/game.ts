@@ -15,12 +15,6 @@ export class World {
   static OFFSET_QUEUE_ARRAY: usize;
 }
 
-let offsetPipeArray = HEAP_BASE;
-
-declare namespace console {
-  function logi(val: i32, boolean?: bool): void;
-}
-
 export function setupWorld(sizeX: i32, sizeY: i32): void {
   World.gridSizeX = sizeX;
   World.gridSizeY = sizeY;

@@ -12,10 +12,6 @@ const SIZE = MAX * sizeof<u8>();
 
 const getStartOffset = (index: usize): usize => World.OFFSET_QUEUE_ARRAY + index * SIZE;
 
-declare namespace console {
-  function logi(val: i32, boolean?: bool): void;
-}
-
 export function fill(): void {
   for (let i: u8 = 0; i < MAX; i++) {
     let option: u8 = randomInt(0, 6) as u8;

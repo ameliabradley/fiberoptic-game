@@ -38,10 +38,6 @@ export function getRandomSide(sizeX: i32, sizeY: i32): i32 {
   return getRegularIndexFromSideIndex(sizeX, sizeY, sideIndex);
 }
 
-declare namespace console {
-  function logi(val: i32): void;
-}
-
 export function getRandomSetBit(bits: u8): u8 {
   let total = countSetBits(bits);
   let random = randomInt(0, total - 1);

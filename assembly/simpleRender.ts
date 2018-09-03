@@ -139,10 +139,6 @@ function renderPipe(offset: i32, width: i32, pipeShape: i32): void {
   }
 }
 
-declare namespace console {
-  function logi(val: i32, boolean?: bool): void;
-}
-
 export function render(width: i32, height: i32): void {
   let sizeX = World.gridSizeX;
   let sizeY = World.gridSizeY;
