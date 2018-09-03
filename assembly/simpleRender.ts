@@ -55,42 +55,35 @@ function renderPipe(offset: i32, width: i32, pipeShape: i32): void {
   for (let y = 0; y < PIPE_SIZE; y++) {
     let pipeLine: i8;
     let orientation: i8 = ORIENTATION_NORMAL;
-    let color = 0xff00ff00;
+    let color = 0xff808080;
+    let onlyShape: i8 = (pipeShape as u8) & 0b1111;
 
-    switch (pipeShape) {
-      case Shape.CROSS: {
+    switch (onlyShape) {
+      case Shape.PIPE_OUTLET_CROSS: {
         pipeLine = pipeCross[y];
         break;
       }
 
-      case Shape.END_T:
-        color = COLOR_END;
-      case Shape.START_T:
+      case Shape.PIPE_OUTLET_TOP:
         pipeLine = pipeStartTop[y];
         break;
 
-      case Shape.END_B:
-        color = COLOR_END;
-      case Shape.START_B:
+      case Shape.PIPE_OUTLET_BOTTOM:
         orientation |= ORIENTATION_REVERSE_Y;
         pipeLine = pipeStartTop[4 - y];
         break;
 
-      case Shape.END_L:
-        color = COLOR_END;
-      case Shape.START_L:
+      case Shape.PIPE_OUTLET_LEFT:
         orientation |= ORIENTATION_ROTATE;
         pipeLine = pipeStartTop[y];
         break;
 
-      case Shape.END_R:
-        color = COLOR_END;
-      case Shape.START_R:
+      case Shape.PIPE_OUTLET_RIGHT:
         orientation |= ORIENTATION_ROTATE;
         pipeLine = pipeStartTop[4 - y];
         break;
 
-      case Shape.EMPTY:
+      case Shape.PIPE_OUTLET_NONE:
       default: {
         pipeLine = 0;
       }
@@ -105,10 +98,16 @@ function renderPipe(offset: i32, width: i32, pipeShape: i32): void {
       renderPixel(offset + pixel, pipeLine & FLAG, color);
     }
   }
+
+  if (pipeShape & (Shape.PIPE_START | Shape.PIPE_END)) {
+    let pixel = getPixelOffset(2, 2, width);
+    let color = pipeShape & Shape.PIPE_START ? 0xff00ff00 : 0xff0000ff;
+    renderPixel(offset + pixel, 1, color);
+  }
 }
 
 declare namespace console {
-  function logi(val: i32): void;
+  function logi(val: i32, boolean?: bool): void;
 }
 
 export function render(width: i32, height: i32): void {

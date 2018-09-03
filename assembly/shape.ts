@@ -1,16 +1,10 @@
-export const STRAIGHT_TB: u8 = 0;
-export const STRAIGHT_LR: u8 = 1;
-export const CROSS: u8 = 2;
-export const ELBOW_TL: u8 = 3;
-export const ELBOW_TR: u8 = 4;
-export const ELBOW_RB: u8 = 5;
-export const ELBOW_LB: u8 = 6;
-export const START_T: u8 = 7;
-export const START_B: u8 = 8;
-export const START_L: u8 = 9;
-export const START_R: u8 = 10;
-export const END_T: u8 = 11;
-export const END_B: u8 = 12;
-export const END_L: u8 = 13;
-export const END_R: u8 = 14;
-export const EMPTY: u8 = 15;
+export const PIPE_OUTLET_NONE: u8 = 0;
+export const PIPE_OUTLET_RIGHT: u8 = 1;
+export const PIPE_OUTLET_LEFT: u8 = 1 << 1;
+export const PIPE_OUTLET_BOTTOM: u8 = 1 << 2;
+export const PIPE_OUTLET_TOP: u8 = 1 << 3;
+export const PIPE_OUTLET_CROSS: u8 =
+  PIPE_OUTLET_BOTTOM | PIPE_OUTLET_LEFT | PIPE_OUTLET_RIGHT | PIPE_OUTLET_TOP;
+
+export const PIPE_START: u8 = 1 << 4;
+export const PIPE_END: u8 = 1 << 5;

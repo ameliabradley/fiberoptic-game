@@ -78,8 +78,8 @@
 		return 0;
 	}
 
-	window.addEventListener('keydown', (e) => { char = char | charFromKey(e.key); console.log(char.toString(2)) });
-	window.addEventListener('keyup', (e) => { char = char & ~charFromKey(e.key); console.log(char.toString(2)) });
+	window.addEventListener('keydown', (e) => { char = char | charFromKey(e.key); });
+	window.addEventListener('keyup', (e) => { char = char & ~charFromKey(e.key); });
 
 	var bcr = cnv.getBoundingClientRect();
 	// exports.fill((loc.clientX - bcr.left) >>> 1, (loc.clientY - bcr.top) >>> 1, 0.5);
@@ -93,7 +93,8 @@
 					console: {
 						// import as console.logi
 						logi(value) {
-							console.log("logi: " + value);
+							//console.log("logi: " + (b) ? value.toString(2) : value);
+							console.log('logi: ', value);
 						}
 					}
 				}

@@ -1,5 +1,4 @@
 import { readFileSync } from "fs";
-
 let wasm;
 let memory;
 const byteSize = 100;
@@ -144,4 +143,18 @@ test("getRandomSetBit", () => {
   //expect(wasm.getRandomSetBit(0b1)).toBe(1);
   expect(wasm.getRandomSetBit(0b10)).toBe(2);
   expect(wasm.getRandomSetBit(0b11)).toBeLessThan(4);
+});
+
+test("getRandomSide", () => {
+  expect(wasm.getRegularIndexFromSideIndex(3, 3, 0)).toBe(0);
+  expect(wasm.getRegularIndexFromSideIndex(3, 3, 1)).toBe(1);
+  expect(wasm.getRegularIndexFromSideIndex(3, 3, 2)).toBe(2);
+  expect(wasm.getRegularIndexFromSideIndex(3, 3, 3)).toBe(3);
+  expect(wasm.getRegularIndexFromSideIndex(3, 3, 4)).toBe(5);
+  expect(wasm.getRegularIndexFromSideIndex(3, 3, 5)).toBe(6);
+  expect(wasm.getRegularIndexFromSideIndex(3, 3, 6)).toBe(7);
+  expect(wasm.getRegularIndexFromSideIndex(3, 3, 7)).toBe(8);
+
+  expect(wasm.getRegularIndexFromSideIndex(4, 8, 6)).toBe(8);
+  expect(wasm.getRegularIndexFromSideIndex(4, 8, 7)).toBe(11);
 });

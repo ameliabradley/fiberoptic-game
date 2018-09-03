@@ -1,20 +1,6 @@
-import { randomInt, safeSetMem, getRandomSetBit } from "./util";
+import { randomInt, getRandomSetBit, getRandomSide } from "./util";
 import * as Pipe from "./pipe";
 import * as Shape from "./shape";
-
-// See: https://stackoverflow.com/questions/39359740/what-are-enum-flags-in-typescript
-export const enum ModifierFlags {
-  NONE,
-  PERMANENT = 1 << 1
-}
-
-export const enum PositionFlag {
-  NONE = 0,
-  TOP = 1,
-  BOTTOM = 1 << 1,
-  LEFT = 1 << 2,
-  RIGHT = 1 << 3
-}
 
 export type Time = i32;
 
@@ -23,28 +9,12 @@ export class World {
   static gridSizeX: i32 = 0;
   static gridSizeY: i32 = 0;
   static nextPipeTime: Time = 0;
-  // content: Pipe[];
-  // queue: Pipe[];
-
-  /*
-  save (offset: i32): void {
-    store<i32>(offset, this.gridSizeX);
-    store<i32>(offset + sizeof<i32>(), this.gridSizeY);
-    store<Time>(offset + (sizeof<i32>() * 2), this.nextPipeTime);
-  }
-
-  load (offset: i32): void {
-    this.gridSizeX = load<i32>(offset);
-    this.gridSizeY = load<i32>(offset + sizeof<i32>());
-    this.nextPipeTime = load<Time>(offset + (sizeof<i32>() * 2));
-  }
-  */
 }
 
 let offsetPipeArray = HEAP_BASE;
 
 declare namespace console {
-  function logi(val: i32): void;
+  function logi(val: i32, boolean?: bool): void;
 }
 
 export function setupWorld(sizeX: i32, sizeY: i32): void {
@@ -52,31 +22,54 @@ export function setupWorld(sizeX: i32, sizeY: i32): void {
   World.gridSizeY = sizeY;
 
   for (let i = 0; i < sizeX * sizeY; i++) {
-    Pipe.saveShape(i, Shape.CROSS);
+    Pipe.saveShape(i, Shape.PIPE_OUTLET_CROSS);
   }
 
   let maxX = sizeX - 1;
   let maxY = sizeY - 1;
-  let x = randomInt(0, maxX);
-  let y = randomInt(0, maxY);
 
-  let options: u8 = 0b1111; // TBLR
-  options &= x === 0 ? 0b1101 : x === maxX ? 0b1110 : 0b1111;
-  options &= y === 0 ? 0b0111 : y === maxY ? 0b1011 : 0b1111;
-  console.logi(options);
+  let sideIndex = getRandomSide(sizeX, sizeY);
+  // let startIndex = (sideIndex < maxX) ? sideIndex : (sideIndex < (maxSide - maxX)) ? ... : sideIndex +
 
-  let shape: u8;
+  let startX = sideIndex % sizeX;
+  let startY = (sideIndex - startX) / sizeX;
+  let startOptions = getValidOutlets(startX, startY, maxX, maxY);
+  let startDirection = getRandomSetBit(startOptions);
+  let start: u8 = startDirection | Shape.PIPE_START;
+  Pipe.saveShape(sideIndex, start);
+  console.logi(sideIndex);
+
+  /*
+  let badSpaceX: i32 = 0;
+  let badSpaceY: i32 = 0;
+
   // prettier-ignore
-  switch (getRandomSetBit(options)) {
-      case 0b1000: shape = Shape.START_T; break;
-      case 0b0100: shape = Shape.START_B; break;
-      case 0b0010: shape = Shape.START_L; break;
-
-      default:
-      case 0b0001: shape = Shape.START_R; break;
+  switch (startDirection) {
+    case Shape.PIPE_OUTLET_BOTTOM: badSpaceY = startY + 1; badSpaceX = startX; break;
+    case Shape.PIPE_OUTLET_TOP: badSpaceY = startY - 1; badSpaceX = startX; break;
+    case Shape.PIPE_OUTLET_LEFT: badSpaceX = startX - 1; badSpaceY = startY; break;
+    case Shape.PIPE_OUTLET_RIGHT: badSpaceX = startX + 1; badSpaceY = startY; break;
   }
 
-  Pipe.saveShape(x + y * sizeX, shape);
+  // Testing
+  let endIndex = randomInt(0, maxX * maxY - 1);
+  if (endIndex >= Pipe.getIndex(badSpaceX, badSpaceY, sizeX)) {
+    endIndex++;
+  }
+
+  let endX = endIndex % sizeX;
+  let endY = (endIndex - endX) / sizeX;
+  let endOptions = getValidOutlets(startX, startY, maxX, maxY);
+  let endDirection = getRandomSetBit(endOptions);
+  Pipe.saveShape(endX + endY * sizeX, endDirection);
+  */
+}
+
+function getValidOutlets(startX: i32, startY: i32, maxX: i32, maxY: i32): u8 {
+  let options: u8 = 0b1111; // TBLR
+  options &= startX === 0 ? 0b1101 : startX === maxX ? 0b1110 : 0b1111;
+  options &= startY === 0 ? 0b0111 : startY === maxY ? 0b1011 : 0b1111;
+  return options;
 }
 
 export function getSizeX(): i32 {
