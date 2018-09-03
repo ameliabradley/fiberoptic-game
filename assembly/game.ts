@@ -1,6 +1,7 @@
 import { randomInt, getRandomSetBit, getRandomSide } from "./util";
 import * as Pipe from "./pipe";
 import * as Shape from "./shape";
+import * as Queue from "./queue";
 
 export type Time = i32;
 
@@ -9,6 +10,9 @@ export class World {
   static gridSizeX: i32 = 0;
   static gridSizeY: i32 = 0;
   static nextPipeTime: Time = 0;
+
+  static OFFSET_PIPE_ARRAY: usize = HEAP_BASE;
+  static OFFSET_QUEUE_ARRAY: usize;
 }
 
 let offsetPipeArray = HEAP_BASE;
@@ -21,23 +25,31 @@ export function setupWorld(sizeX: i32, sizeY: i32): void {
   World.gridSizeX = sizeX;
   World.gridSizeY = sizeY;
 
+  // Setup array offset
+  World.OFFSET_QUEUE_ARRAY = HEAP_BASE + World.gridSizeX * World.gridSizeY * Pipe.SIZE;
+
+  Queue.fill();
+
   for (let i = 0; i < sizeX * sizeY; i++) {
-    Pipe.saveShape(i, Shape.PIPE_OUTLET_CROSS);
+    Pipe.saveShape(i, Shape.PIPE_OUTLET_NONE);
   }
 
   let maxX = sizeX - 1;
   let maxY = sizeY - 1;
 
   let sideIndex = getRandomSide(sizeX, sizeY);
-  // let startIndex = (sideIndex < maxX) ? sideIndex : (sideIndex < (maxSide - maxX)) ? ... : sideIndex +
 
   let startX = sideIndex % sizeX;
   let startY = (sideIndex - startX) / sizeX;
   let startOptions = getValidOutlets(startX, startY, maxX, maxY);
   let startDirection = getRandomSetBit(startOptions);
-  let start: u8 = startDirection | Shape.PIPE_START;
-  Pipe.saveShape(sideIndex, start);
-  console.logi(sideIndex);
+  Pipe.saveShape(sideIndex, startDirection | Shape.PIPE_START);
+
+  let endX = maxX - startX;
+  let endY = maxY - startY;
+  let endOptions = getValidOutlets(endX, endY, maxX, maxY);
+  let endDirection = getRandomSetBit(endOptions);
+  Pipe.saveShape(endX + endY * sizeX, endDirection | Shape.PIPE_END);
 
   /*
   let badSpaceX: i32 = 0;

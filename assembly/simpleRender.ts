@@ -1,8 +1,9 @@
 import { World } from "./game";
 import * as Shape from "./shape";
 import * as Pipe from "./pipe";
+import * as Queue from "./queue";
 
-const offsetCanvas = 300;
+const offsetCanvas = 500;
 
 // prettier-ignore
 const pipeCross: u8[] = [
@@ -21,6 +22,9 @@ const pipeElbow: u8[] = [
   0b00011110,
   0b00000000,
 ];
+
+// prettier-ignore
+const pipeStraight: u8 = 0b00001010;
 
 // prettier-ignore
 const pipeStartTop: u8[] = [
@@ -43,6 +47,8 @@ const PIXEL_SIZE = sizeof<i32>();
 function renderPixel(offset: i32, off: i32, color: i32): void {
   store<i32>(offset, off ? color : 0);
 }
+
+const OFFSET_GRID_X = 6;
 
 function getPixelOffset(x: i32, y: i32, width: i32): i32 {
   return (x + y * width) * PIXEL_SIZE;
@@ -83,6 +89,33 @@ function renderPipe(offset: i32, width: i32, pipeShape: i32): void {
         pipeLine = pipeStartTop[4 - y];
         break;
 
+      case Shape.PIPE_OUTLET_LEFT | Shape.PIPE_OUTLET_TOP:
+        pipeLine = pipeElbow[y];
+        break;
+
+      case Shape.PIPE_OUTLET_RIGHT | Shape.PIPE_OUTLET_TOP:
+        orientation |= ORIENTATION_REVERSE_X;
+        pipeLine = pipeElbow[y];
+        break;
+
+      case Shape.PIPE_OUTLET_LEFT | Shape.PIPE_OUTLET_BOTTOM:
+        pipeLine = pipeElbow[4 - y];
+        break;
+
+      case Shape.PIPE_OUTLET_RIGHT | Shape.PIPE_OUTLET_BOTTOM:
+        orientation |= ORIENTATION_REVERSE_X;
+        pipeLine = pipeElbow[4 - y];
+        break;
+
+      case Shape.PIPE_OUTLET_TOP | Shape.PIPE_OUTLET_BOTTOM:
+        pipeLine = pipeStraight;
+        break;
+
+      case Shape.PIPE_OUTLET_LEFT | Shape.PIPE_OUTLET_RIGHT:
+        orientation |= ORIENTATION_ROTATE;
+        pipeLine = pipeStraight;
+        break;
+
       case Shape.PIPE_OUTLET_NONE:
       default: {
         pipeLine = 0;
@@ -117,7 +150,16 @@ export function render(width: i32, height: i32): void {
     for (let y = 0; y < sizeY; y++) {
       let index = Pipe.getIndex(x, y, World.gridSizeX);
       let pipeShape = Pipe.getShape(index);
-      renderPipe(offsetCanvas + getPixelOffset(x * 5, y * 5, width), width, pipeShape);
+      renderPipe(
+        offsetCanvas + getPixelOffset(x * 5 + OFFSET_GRID_X, y * 5, width),
+        width,
+        pipeShape
+      );
     }
+  }
+
+  for (let i: u8 = 0; i < Queue.MAX; i++) {
+    let shape = Queue.getShape(i);
+    renderPipe(offsetCanvas + getPixelOffset(0, i * 5, width), width, shape);
   }
 }

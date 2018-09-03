@@ -41,7 +41,7 @@
 	var canvasByteSize = (size + size) << 2; // 4b per pixel (X << N is the same as X * 2 ^ N)
 
 	// TODO: Update this on release to the number of bytes we expect the internal memory to take up
-	var memByteSize = 300;
+	var memByteSize = 500;
 
 	var totalPages = (memByteSize + ((canvasByteSize + 0xffff) & ~0xffff)) >>> 16;
 	console.log(`Memory Allocated: ${totalPages * 6.4} KiB`);
@@ -103,7 +103,7 @@
 		.then(results => {
 			const exports = results.instance.exports;
 
-			exports.setupWorld(5, 5, height, width);
+			exports.setupWorld(8, 8, height, width);
 
 			var mem = new Uint32Array(memory.buffer, memByteSize);
 			(function update() {

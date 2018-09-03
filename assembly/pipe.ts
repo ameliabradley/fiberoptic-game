@@ -3,7 +3,7 @@ const MODIFIER_FLAGS_OFFSET: usize = SHAPE_OFFSET + sizeof<u8>();
 const FLOW_POSITIONS_OFFSET: usize = MODIFIER_FLAGS_OFFSET + sizeof<u8>();
 const FLOW_1_OFFSET: usize = FLOW_POSITIONS_OFFSET + sizeof<u8>();
 const FLOW_2_OFFSET: usize = FLOW_1_OFFSET + sizeof<u8>();
-const SIZE: usize = FLOW_2_OFFSET + sizeof<u8>();
+export const SIZE: usize = FLOW_2_OFFSET + sizeof<u8>();
 
 let offsetPipeArray = HEAP_BASE;
 
