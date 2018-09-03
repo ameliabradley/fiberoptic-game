@@ -5,7 +5,8 @@
     "moduleResolution": "node",
     "module": "commonjs",
     "allowJs": false,
-    "typeRoots": ["types"]
+    "typeRoots": ["types"],
+    "outFile": "../dist/main.js"
   },
   "include": ["./**/*.ts"]
 }

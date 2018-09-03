@@ -44,31 +44,6 @@ export function setupWorld(sizeX: i32, sizeY: i32): void {
   let endOptions = getValidOutlets(endX, endY, maxX, maxY);
   let endDirection = getRandomSetBit(endOptions);
   Pipe.saveShape(endX + endY * sizeX, endDirection | Shape.PIPE_END);
-
-  /*
-  let badSpaceX: i32 = 0;
-  let badSpaceY: i32 = 0;
-
-  // prettier-ignore
-  switch (startDirection) {
-    case Shape.PIPE_OUTLET_BOTTOM: badSpaceY = startY + 1; badSpaceX = startX; break;
-    case Shape.PIPE_OUTLET_TOP: badSpaceY = startY - 1; badSpaceX = startX; break;
-    case Shape.PIPE_OUTLET_LEFT: badSpaceX = startX - 1; badSpaceY = startY; break;
-    case Shape.PIPE_OUTLET_RIGHT: badSpaceX = startX + 1; badSpaceY = startY; break;
-  }
-
-  // Testing
-  let endIndex = randomInt(0, maxX * maxY - 1);
-  if (endIndex >= Pipe.getIndex(badSpaceX, badSpaceY, sizeX)) {
-    endIndex++;
-  }
-
-  let endX = endIndex % sizeX;
-  let endY = (endIndex - endX) / sizeX;
-  let endOptions = getValidOutlets(startX, startY, maxX, maxY);
-  let endDirection = getRandomSetBit(endOptions);
-  Pipe.saveShape(endX + endY * sizeX, endDirection);
-  */
 }
 
 export function getValidOutlets(startX: i32, startY: i32, maxX: i32, maxY: i32): u8 {

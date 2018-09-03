@@ -3,10 +3,11 @@
   "scripts": {
     "test": "jest",
     "serve": "http-server dist -o",
-    "build:watch": "nodemon -e ts --watch assembly --watch __tests__ --exec 'yarn build:untouched; yarn build:optimized; yarn build:unit; yarn test'",
-    "build:untouched": "asc assembly/module.ts -b dist/module.untouched.wasm --validate --sourceMap --measure --importMemory --use Math=JSMath",
-    "build:optimized": "asc assembly/module.ts -b dist/module.optimized.wasm --validate --sourceMap --measure --optimize --importMemory --use Math=JSMath",
-    "build:unit": "asc assembly/unit.ts -b dist/unit.untouched.wasm --validate --sourceMap --measure --importMemory --use Math=JSMath"
+    "build:watch": "nodemon -e ts --watch src --watch __tests__ --exec 'yarn build:untouched; yarn build:unit; yarn test; yarn build:client'",
+    "build:client": "webpack",
+    "build:untouched": "asc src/assembly/module.ts -b dist/module.untouched.wasm --validate --sourceMap --measure --importMemory --use Math=JSMath",
+    "build:optimized": "asc src/assembly/module.ts -b dist/module.optimized.wasm --validate --sourceMap --measure --optimize --importMemory --use Math=JSMath",
+    "build:unit": "asc src/assembly/unit.ts -b dist/unit.untouched.wasm --validate --sourceMap --measure --importMemory --use Math=JSMath"
   },
   "jest": {
     "moduleFileExtensions": [
@@ -18,15 +19,15 @@
       "^.+\\.(ts|tsx)$": "ts-jest"
     },
     "roots": [
-      "__tests__"
+      "src/__tests__"
     ],
     "globals": {
       "ts-jest": {
-        "tsConfigFile": "__tests__/tsconfig.json"
+        "tsConfigFile": "src/__tests__/tsconfig.json"
       }
     },
     "testMatch": [
-      "**/__tests__/*.+(ts|tsx|js)"
+      "**/src/__tests__/*.+(ts|tsx|js)"
     ]
   },
   "prettier": {
@@ -39,9 +40,13 @@
     "jest": "^23.5.0",
     "nodemon": "^1.18.4",
     "ts-jest": "^23.1.4",
-    "typescript": "^3.0.3"
+    "typescript": "^3.0.3",
+    "webpack": "^4.0.1",
+    "webpack-cli": "^2.0.9"
   },
   "dependencies": {
-    "@types/node": "^10.9.4"
+    "@types/node": "^10.9.4",
+    "@types/webassembly-js-api": "^0.0.1",
+    "ts-loader": "^5.0.0"
   }
 }
