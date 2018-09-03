@@ -71,7 +71,7 @@ export function setupWorld(sizeX: i32, sizeY: i32): void {
   */
 }
 
-function getValidOutlets(startX: i32, startY: i32, maxX: i32, maxY: i32): u8 {
+export function getValidOutlets(startX: i32, startY: i32, maxX: i32, maxY: i32): u8 {
   let options: u8 = 0b1111; // TBLR
   options &= startX === 0 ? 0b1101 : startX === maxX ? 0b1110 : 0b1111;
   options &= startY === 0 ? 0b0111 : startY === maxY ? 0b1011 : 0b1111;

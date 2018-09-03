@@ -5,10 +5,7 @@
     "moduleResolution": "node",
     "module": "commonjs",
     "allowJs": false,
-    "typeRoots": [ "types" ]
+    "typeRoots": ["types"]
   },
-  "include": [
-    "./**/*.ts"
-  ]
+  "include": ["./**/*.ts"]
 }
-  
