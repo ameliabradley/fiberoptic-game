@@ -2,6 +2,7 @@ import { randomInt, getRandomSetBit, getRandomSide } from "./util";
 import * as Pipe from "./pipe";
 import * as Shape from "./shape";
 import * as Queue from "./queue";
+import * as Keys from "../shared/keyboard";
 
 export type Time = i32;
 
@@ -10,6 +11,9 @@ export class World {
   static gridSizeX: i32 = 0;
   static gridSizeY: i32 = 0;
   static nextPipeTime: Time = 0;
+
+  static cursorPositionX: i32 = 0;
+  static cursorPositionY: i32 = 0;
 
   static OFFSET_PIPE_ARRAY: usize = HEAP_BASE;
   static OFFSET_QUEUE_ARRAY: usize;
@@ -63,4 +67,39 @@ export function getSizeY(): i32 {
 
 export function getHeapBase(): usize {
   return HEAP_BASE;
+}
+
+export function setKeys(char: i8): void {
+  if (char & Keys.FLAG_DOWN) {
+    if (World.cursorPositionY !== World.gridSizeY - 1) {
+      World.cursorPositionY += 1;
+    }
+  }
+
+  if (char & Keys.FLAG_LEFT) {
+    if (World.cursorPositionX !== 0) {
+      World.cursorPositionX -= 1;
+    }
+  }
+
+  if (char & Keys.FLAG_UP) {
+    if (World.cursorPositionY !== 0) {
+      World.cursorPositionY -= 1;
+    }
+  }
+
+  if (char & Keys.FLAG_RIGHT) {
+    if (World.cursorPositionX !== World.gridSizeX - 1) {
+      World.cursorPositionX += 1;
+    }
+  }
+
+  if (char & Keys.FLAG_SPACE) {
+    let shape = Queue.pop();
+    Pipe.saveShape(World.cursorPositionX + World.cursorPositionY * World.gridSizeX, shape);
+  }
+}
+
+declare namespace console {
+  function logi(val: i32, boolean?: bool): void;
 }

@@ -14,11 +14,16 @@ const getStartOffset = (index: usize): usize => World.OFFSET_QUEUE_ARRAY + index
 
 export function fill(): void {
   for (let i: u8 = 0; i < MAX; i++) {
-    let option: u8 = randomInt(0, 6) as u8;
-    let shape: u8 = 0;
+    fillWithRandomShape(i);
+  }
+}
 
-    // prettier-ignore
-    switch (option) {
+function fillWithRandomShape(index: i32): void {
+  let option: u8 = randomInt(0, 6) as u8;
+  let shape: u8 = 0;
+
+  // prettier-ignore
+  switch (option) {
       case 0: shape = Shape.PIPE_OUTLET_LEFT | Shape.PIPE_OUTLET_TOP; break;
       case 1: shape = Shape.PIPE_OUTLET_RIGHT | Shape.PIPE_OUTLET_TOP; break;
       case 2: shape = Shape.PIPE_OUTLET_LEFT | Shape.PIPE_OUTLET_BOTTOM; break;
@@ -28,14 +33,23 @@ export function fill(): void {
       case 6: shape = Shape.PIPE_OUTLET_TOP | Shape.PIPE_OUTLET_BOTTOM; break;
     }
 
-    store<u8>(getStartOffset(i) + SHAPE_OFFSET, shape);
-  }
+  storeShape(index, shape);
+}
+
+export function storeShape(index: i32, shape: u8): void {
+  store<u8>(getStartOffset(index) + SHAPE_OFFSET, shape);
 }
 
 export function getShape(index: i32): u8 {
   return load<u8>(getStartOffset(index) + SHAPE_OFFSET);
 }
 
-export function pop(x: u8, y: u8): void {
-  // store<u8>(World.OFFSET_QUEUE_ARRAY, shape);
+export function pop(): u8 {
+  let shape = getShape(0);
+  for (let i = 1; i < (MAX as i32); i++) {
+    let oldShape = getShape(i);
+    storeShape(i - 1, oldShape);
+  }
+  fillWithRandomShape(MAX - 1);
+  return shape;
 }

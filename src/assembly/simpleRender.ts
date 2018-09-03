@@ -44,8 +44,31 @@ const PIPE_SIZE = 5;
 
 const PIXEL_SIZE = sizeof<i32>();
 
-function renderPixel(offset: i32, off: i32, color: i32): void {
-  store<i32>(offset, off ? color : 0);
+function getPos(color: i32, pos: i32): u8 {
+  let offset = 24 - pos * 8;
+  return ((color & (0xff << offset)) >> offset) as u8;
+}
+
+function renderPixel(offset: i32, color: i32): void {
+  if ((color & 0xff000000) === 0xff000000) {
+    store<i32>(offset, color);
+  } else {
+    // FIXME: ... Not working
+    let bg: i32 = load<i32>(offset);
+
+    let fg3 = getPos(color, 0);
+
+    let alpha: i32 = fg3 + 1;
+    let inv_alpha: i32 = 256 - fg3;
+
+    let b: u8 = ((alpha * getPos(color, 1) + inv_alpha * getPos(bg, 1)) >> 8) as u8;
+    let g: u8 = ((alpha * getPos(color, 2) + inv_alpha * getPos(bg, 2)) >> 8) as u8;
+    let r: u8 = ((alpha * getPos(color, 3) + inv_alpha * getPos(bg, 3)) >> 8) as u8;
+
+    let result: i32 = 0xff000000 + (b << 16) + (g << 8) + r;
+
+    store<i32>(offset, result);
+  }
 }
 
 const OFFSET_GRID_X = 6;
@@ -128,14 +151,30 @@ function renderPipe(offset: i32, width: i32, pipeShape: i32): void {
         orientation & ORIENTATION_ROTATE
           ? getPixelOffset(y, x, width)
           : getPixelOffset(x, y, width);
-      renderPixel(offset + pixel, pipeLine & FLAG, color);
+      renderPixel(offset + pixel, pipeLine & FLAG ? color : 0xff000000);
     }
   }
 
   if (pipeShape & (Shape.PIPE_START | Shape.PIPE_END)) {
     let pixel = getPixelOffset(2, 2, width);
     let color = pipeShape & Shape.PIPE_START ? 0xff00ff00 : 0xff0000ff;
-    renderPixel(offset + pixel, 1, color);
+    renderPixel(offset + pixel, color);
+  }
+}
+
+function drawRect(
+  width: i32,
+  offsetX: i32,
+  offsetY: i32,
+  sizeX: i32,
+  sizeY: i32,
+  color: i32
+): void {
+  let offset = offsetCanvas + getPixelOffset(offsetX, offsetY, width);
+  for (let y = 0; y < sizeY; y++) {
+    for (let x = 0; x < sizeX; x++) {
+      renderPixel(offset + getPixelOffset(x + OFFSET_GRID_X, y, width), color);
+    }
   }
 }
 
@@ -158,4 +197,9 @@ export function render(width: i32, height: i32): void {
     let shape = Queue.getShape(i);
     renderPipe(offsetCanvas + getPixelOffset(0, i * 5, width), width, shape);
   }
+
+  drawRect(width, World.cursorPositionX * 5, World.cursorPositionY * 5, 1, 1, 0xffff00ff);
+  drawRect(width, World.cursorPositionX * 5 + 4, World.cursorPositionY * 5, 1, 1, 0xffff00ff);
+  drawRect(width, World.cursorPositionX * 5, World.cursorPositionY * 5 + 4, 1, 1, 0xffff00ff);
+  drawRect(width, World.cursorPositionX * 5 + 4, World.cursorPositionY * 5 + 4, 1, 1, 0xffff00ff);
 }

@@ -57,16 +57,24 @@ function charFromKey(key: string) {
     case "d":
     case "ArrowRight":
       return Keyboard.FLAG_RIGHT;
+
+    case " ":
+    case "Space":
+      return Keyboard.FLAG_SPACE;
   }
 
   return 0;
 }
 
+let exports: any;
+
 window.addEventListener("keydown", e => {
   char = char | charFromKey(e.key);
+  exports.setKeys(char);
 });
 window.addEventListener("keyup", e => {
   char = char & ~charFromKey(e.key);
+  exports.setKeys(char);
 });
 
 var bcr = cnv.getBoundingClientRect();
@@ -88,7 +96,7 @@ fetch("module.untouched.wasm")
     })
   )
   .then(results => {
-    const exports = results.instance.exports;
+    exports = results.instance.exports;
 
     exports.setupWorld(8, 8, height, width);
 
@@ -106,7 +114,7 @@ fetch("module.untouched.wasm")
     var imageData = ctx.createImageData(width, height);
     var argb = new Uint32Array(imageData.data.buffer);
     (function render() {
-      // requestAnimationFrame(render);
+      requestAnimationFrame(render);
       exports.simpleRender(width, height);
       argb.set(mem.subarray(0, size)); // copy output to image buffer
       ctx.putImageData(imageData, 0, 0); // apply image buffer
