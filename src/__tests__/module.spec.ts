@@ -15,8 +15,6 @@ test("setupWorld correctly loads world", () => {
 });
 
 test("random", () => {
-  wasm.random();
-
   const randomInt = wasm.randomInt(10, 11);
   expect(randomInt).toBeGreaterThanOrEqual(10);
   expect(randomInt).toBeLessThanOrEqual(11);

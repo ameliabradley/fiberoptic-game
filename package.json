@@ -3,7 +3,7 @@
   "scripts": {
     "test": "jest",
     "serve": "http-server dist -o",
-    "build:watch": "nodemon -e ts --watch src --watch __tests__ --exec 'yarn build:untouched; yarn build:unit; yarn test; yarn build:client'",
+    "build:watch": "nodemon -e ts --watch src --watch __tests__ --exec 'yarn build:untouched; yarn build:optimized; yarn build:unit; yarn test; yarn build:client'",
     "build:client": "webpack",
     "build:untouched": "asc src/assembly/module.ts -b dist/module.untouched.wasm --validate --sourceMap --measure --importMemory --use Math=JSMath",
     "build:optimized": "asc src/assembly/module.ts -b dist/module.optimized.wasm --validate --sourceMap --measure --optimize --importMemory --use Math=JSMath",

@@ -3,6 +3,7 @@ import * as Pipe from "./pipe";
 import * as Shape from "./shape";
 import * as Queue from "./queue";
 import * as Keys from "../shared/keyboard";
+import { getTime } from "./imports";
 
 export type Time = i32;
 
@@ -14,6 +15,9 @@ export class World {
 
   static cursorPositionX: i32 = 0;
   static cursorPositionY: i32 = 0;
+
+  static countdownEnd: i32;
+  static readonly countdownTotal: i32 = 1000 * 15;
 
   static OFFSET_PIPE_ARRAY: usize = HEAP_BASE;
   static OFFSET_QUEUE_ARRAY: usize;
@@ -48,6 +52,8 @@ export function setupWorld(sizeX: i32, sizeY: i32): void {
   let endOptions = getValidOutlets(endX, endY, maxX, maxY);
   let endDirection = getRandomSetBit(endOptions);
   Pipe.saveShape(endX + endY * sizeX, endDirection | Shape.PIPE_END);
+
+  World.countdownEnd = getTime() + World.countdownTotal;
 }
 
 export function getValidOutlets(startX: i32, startY: i32, maxX: i32, maxY: i32): u8 {
@@ -95,11 +101,10 @@ export function setKeys(char: i8): void {
   }
 
   if (char & Keys.FLAG_SPACE) {
-    let shape = Queue.pop();
-    Pipe.saveShape(World.cursorPositionX + World.cursorPositionY * World.gridSizeX, shape);
+    let index = World.cursorPositionX + World.cursorPositionY * World.gridSizeX;
+    if (Pipe.getShape(index) === Shape.PIPE_OUTLET_NONE) {
+      let shape = Queue.pop();
+      Pipe.saveShape(index, shape);
+    }
   }
-}
-
-declare namespace console {
-  function logi(val: i32, boolean?: bool): void;
 }

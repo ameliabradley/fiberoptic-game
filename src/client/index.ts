@@ -87,11 +87,11 @@ fetch("module.untouched.wasm")
       env: { memory: memory },
       JSMath: Math,
       console: {
-        // import as console.logi
-        logi(value: number) {
-          //console.log("logi: " + (b) ? value.toString(2) : value);
-          console.log("logi: ", value);
-        }
+        logi: (value: number) => console.log("logi: ", value),
+        logf: (value: number) => console.log("logf: ", value)
+      },
+      tools: {
+        time: () => Math.floor(performance.now())
       }
     })
   )

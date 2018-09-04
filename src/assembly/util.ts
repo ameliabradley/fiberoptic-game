@@ -1,9 +1,5 @@
-export function random(): f64 {
-  return Math.random();
-}
-
 export function randomInt(min: i32, max: i32): i32 {
-  return (Math.floor(random() * ((max - min + 1) as f64)) as i32) + min;
+  return (Math.floor(Math.random() * ((max - min + 1) as f64)) as i32) + min;
 }
 
 export function countSetBits(n: u8): u8 {

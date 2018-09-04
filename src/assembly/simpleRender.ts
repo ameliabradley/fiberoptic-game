@@ -2,6 +2,7 @@ import { World } from "./game";
 import * as Shape from "./shape";
 import * as Pipe from "./pipe";
 import * as Queue from "./queue";
+import { getTime, logi, logf } from "./imports";
 
 const offsetCanvas = 500;
 
@@ -198,8 +199,22 @@ export function render(width: i32, height: i32): void {
     renderPipe(offsetCanvas + getPixelOffset(0, i * 5, width), width, shape);
   }
 
-  drawRect(width, World.cursorPositionX * 5, World.cursorPositionY * 5, 1, 1, 0xffff00ff);
-  drawRect(width, World.cursorPositionX * 5 + 4, World.cursorPositionY * 5, 1, 1, 0xffff00ff);
-  drawRect(width, World.cursorPositionX * 5, World.cursorPositionY * 5 + 4, 1, 1, 0xffff00ff);
-  drawRect(width, World.cursorPositionX * 5 + 4, World.cursorPositionY * 5 + 4, 1, 1, 0xffff00ff);
+  let startX = World.cursorPositionX * PIPE_SIZE;
+  let startY = World.cursorPositionY * PIPE_SIZE;
+  let end = PIPE_SIZE - 1;
+  drawRect(width, startX, startY, 1, 1, 0xffff00ff);
+  drawRect(width, startX + end, startY, 1, 1, 0xffff00ff);
+  drawRect(width, startX, startY + end, 1, 1, 0xffff00ff);
+  drawRect(width, startX + end, startY + end, 1, 1, 0xffff00ff);
+
+  let time = getTime();
+  let fullProgressWidth = World.gridSizeX * PIPE_SIZE;
+  if (World.countdownEnd > time) {
+    let percentage = (<f32>World.countdownEnd - <f32>time) / <f32>World.countdownTotal;
+    let pixelWidth: i32 = <i32>(percentage * <f32>fullProgressWidth);
+    drawRect(width, 0, World.gridSizeY * PIPE_SIZE, pixelWidth, 1, 0xff00ff00);
+    drawRect(width, 0, World.gridSizeY * PIPE_SIZE, fullProgressWidth - pixelWidth, 1, 0xff000000);
+  } else {
+    drawRect(width, 0, World.gridSizeY * PIPE_SIZE, fullProgressWidth, 1, 0xff0000ff);
+  }
 }

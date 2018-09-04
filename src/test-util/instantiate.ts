@@ -17,10 +17,12 @@ export const instantiate = async () => {
     env: { memory: memory },
     JSMath: Math,
     console: {
-      // import as console.logi
       logi(value) {
         console.log("logi: " + value);
       }
+    },
+    tools: {
+      time: () => Math.floor(new Date().getTime())
     }
   });
 
