@@ -12,16 +12,6 @@ var height = 50;
 cnv.width = width;
 cnv.height = height;
 
-(cnv.style as any) = `
-image-rendering: optimizeSpeed;
-image-rendering: -moz-crisp-edges;
-image-rendering: -webkit-optimize-contrast;
-image-rendering: -o-crisp-edges;
-image-rendering: optimize-contrast;
-image-rendering: crisp-edges;
-image-rendering: pixelated;
--ms-interpolation-mode: nearest-neighbor;
-`;
 ctx.imageSmoothingEnabled = false;
 
 var size = height * width;

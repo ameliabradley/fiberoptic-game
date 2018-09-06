@@ -1,14 +1,30 @@
 <style>
-	canvas {
+  body {
+    background: #333333;
+  }
+
+  canvas {
+    /*
 		position: absolute;
 		top: 60px;
 		left: 20px;
 		width: calc(100% - 40px);
 		height: calc(100% - 80px);
-		background: #100707;
-		cursor: cell;
-		user-select: none;
-	}
+      */
+    width: 800px;
+    height: 600px;
+    background: #100707;
+    cursor: cell;
+    user-select: none;
+    image-rendering: optimizeSpeed;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: -o-crisp-edges;
+    image-rendering: optimize-contrast;
+    image-rendering: crisp-edges;
+    image-rendering: pixelated;
+    -ms-interpolation-mode: nearest-neighbor;
+  }
 </style>
 <canvas height="100" width="100"></canvas>
 <script src="bundle.js"></script>
