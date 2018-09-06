@@ -6,7 +6,6 @@ import * as Keyboard from "../shared/keyboard";
 var cnv = document.getElementsByTagName("canvas")[0];
 
 var ctx = cnv.getContext("2d");
-var bcr = cnv.getBoundingClientRect();
 
 var width = 50;
 var height = 50;
@@ -77,9 +76,6 @@ window.addEventListener("keyup", e => {
   exports.setKeys(char);
 });
 
-var bcr = cnv.getBoundingClientRect();
-// exports.fill((loc.clientX - bcr.left) >>> 1, (loc.clientY - bcr.top) >>> 1, 0.5);
-
 fetch("module.untouched.wasm")
   .then(response => response.arrayBuffer())
   .then(bytes =>
@@ -97,25 +93,17 @@ fetch("module.untouched.wasm")
   )
   .then(results => {
     exports = results.instance.exports;
-
     exports.setupWorld(8, 8, height, width);
 
-    var mem = new Uint32Array(memory.buffer, memByteSize);
-    (function update() {
-      // setTimeout(update, 1000 / 30); // Update about 30 times a second
-      // mem.copyWithin(memByteSize, size, size + size);      // copy output to input
-      // const result = exports.simpleRender(char);                            // perform the next step
-      // console.log(char);
-      // char = 0;
-      // console.log(mem.slice(0, 10))
-    })();
+    var offsetCanvas = exports.getOffsetCanvas();
+    var mem = new Uint32Array(memory.buffer, offsetCanvas);
 
     // Keep rendering the output at [size, 2*size]
     var imageData = ctx.createImageData(width, height);
     var argb = new Uint32Array(imageData.data.buffer);
     (function render() {
       requestAnimationFrame(render);
-      exports.simpleRender(width, height);
+      exports.step(width, height, Math.floor(performance.now()));
       argb.set(mem.subarray(0, size)); // copy output to image buffer
       ctx.putImageData(imageData, 0, 0); // apply image buffer
     })();

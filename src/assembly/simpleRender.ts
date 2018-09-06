@@ -4,8 +4,6 @@ import * as Pipe from "./pipe";
 import * as Queue from "./queue";
 import { getTime, logi, logf } from "./imports";
 
-const offsetCanvas = 500;
-
 // prettier-ignore
 const pipeCross: u8[] = [
   0b00001010,
@@ -51,8 +49,9 @@ function getPos(color: i32, pos: i32): u8 {
 }
 
 function renderPixel(offset: i32, color: i32): void {
-  if ((color & 0xff000000) === 0xff000000) {
-    store<i32>(offset, color);
+  // if ((color & 0xff000000) === 0xff000000) {
+  store<i32>(offset, color);
+  /*
   } else {
     // FIXME: ... Not working
     let bg: i32 = load<i32>(offset);
@@ -70,6 +69,7 @@ function renderPixel(offset: i32, color: i32): void {
 
     store<i32>(offset, result);
   }
+  */
 }
 
 const OFFSET_GRID_X = 6;
@@ -81,12 +81,19 @@ function getPixelOffset(x: i32, y: i32, width: i32): i32 {
 const COLOR_START = 0xff00ff00;
 const COLOR_END = 0xff0000ff;
 
+const PIPE_COLOR = 0xff808080;
+const BACKGROUND_COLOR = 0xff000000;
+
 function renderPipe(offset: i32, width: i32, pipeShape: i32): void {
   for (let y = 0; y < PIPE_SIZE; y++) {
     let pipeLine: i8;
     let orientation: i8 = ORIENTATION_NORMAL;
     let color = 0xff808080;
     let onlyShape: i8 = (pipeShape as u8) & 0b1111;
+
+    // What's the most simple way to render sludge going through the pipe?
+    // Also, is there a more simple way to render pipe?
+    // TBLR...
 
     switch (onlyShape) {
       case Shape.PIPE_OUTLET_CROSS: {
@@ -152,13 +159,13 @@ function renderPipe(offset: i32, width: i32, pipeShape: i32): void {
         orientation & ORIENTATION_ROTATE
           ? getPixelOffset(y, x, width)
           : getPixelOffset(x, y, width);
-      renderPixel(offset + pixel, pipeLine & FLAG ? color : 0xff000000);
+      renderPixel(offset + pixel, pipeLine & FLAG ? PIPE_COLOR : BACKGROUND_COLOR);
     }
   }
 
   if (pipeShape & (Shape.PIPE_START | Shape.PIPE_END)) {
     let pixel = getPixelOffset(2, 2, width);
-    let color = pipeShape & Shape.PIPE_START ? 0xff00ff00 : 0xff0000ff;
+    let color = pipeShape & Shape.PIPE_START ? COLOR_START : COLOR_END;
     renderPixel(offset + pixel, color);
   }
 }
@@ -171,15 +178,17 @@ function drawRect(
   sizeY: i32,
   color: i32
 ): void {
-  let offset = offsetCanvas + getPixelOffset(offsetX, offsetY, width);
-  for (let y = 0; y < sizeY; y++) {
-    for (let x = 0; x < sizeX; x++) {
+  let incY = sizeY > 0 ? 1 : -1;
+  let incX = sizeX > 0 ? 1 : -1;
+  let offset = World.OFFSET_CANVAS + getPixelOffset(offsetX, offsetY, width);
+  for (let y = 0; y !== sizeY; y += incY) {
+    for (let x = 0; x !== sizeX; x += incX) {
       renderPixel(offset + getPixelOffset(x + OFFSET_GRID_X, y, width), color);
     }
   }
 }
 
-export function render(width: i32, height: i32): void {
+export function render(width: i32, height: i32, time: i32): void {
   let sizeX = World.gridSizeX;
   let sizeY = World.gridSizeY;
   for (let x = 0; x < sizeX; x++) {
@@ -187,16 +196,92 @@ export function render(width: i32, height: i32): void {
       let index = Pipe.getIndex(x, y, World.gridSizeX);
       let pipeShape = Pipe.getShape(index);
       renderPipe(
-        offsetCanvas + getPixelOffset(x * 5 + OFFSET_GRID_X, y * 5, width),
+        World.OFFSET_CANVAS + getPixelOffset(x * 5 + OFFSET_GRID_X, y * 5, width),
         width,
         pipeShape
       );
+
+      for (let flowIndex = 0; flowIndex < 2; flowIndex++) {
+        let flowFrom = Pipe.getFlowFrom(index, flowIndex);
+        if (flowFrom > 0) {
+          let flowStart = Pipe.getFlowStart(index, flowFrom);
+          if (flowStart < time) {
+            let percentage: f32 = (<f32>time - <f32>flowStart) / <f32>Pipe.BURST_TIME;
+            if (percentage > 1) percentage = 1;
+            let pixelWidth: i32 = <i32>(percentage * <f32>PIPE_SIZE);
+
+            {
+              let startX = 0;
+              let startY = 0;
+              let flowHeight = 1;
+              let flowWidth = 1;
+              switch (flowFrom) {
+                case Shape.PIPE_OUTLET_TOP:
+                  startX = 2;
+                  flowHeight = pixelWidth > 2 ? 2 : pixelWidth;
+                  break;
+                case Shape.PIPE_OUTLET_BOTTOM:
+                  startX = 2;
+                  startY = 4;
+                  flowHeight = pixelWidth > 2 ? -2 : -pixelWidth;
+                  break;
+                case Shape.PIPE_OUTLET_LEFT:
+                  startY = 2;
+                  flowWidth = pixelWidth > 2 ? 2 : pixelWidth;
+                  break;
+                case Shape.PIPE_OUTLET_RIGHT:
+                  startY = 2;
+                  startX = 4;
+                  flowWidth = pixelWidth > 2 ? -2 : -pixelWidth;
+                  break;
+              }
+              drawRect(
+                width,
+                x * PIPE_SIZE + startX,
+                y * PIPE_SIZE + startY,
+                flowWidth,
+                flowHeight,
+                0xff00ff00
+              );
+            }
+
+            if (pixelWidth > 2) {
+              let remaining = pixelWidth - 2;
+              let flowHeight = 1;
+              let flowWidth = 1;
+              let outlet: u8 = Pipe.getOutlet(pipeShape, flowFrom);
+              switch (outlet) {
+                case Shape.PIPE_OUTLET_TOP:
+                  flowHeight = -remaining;
+                  break;
+                case Shape.PIPE_OUTLET_BOTTOM:
+                  flowHeight = remaining;
+                  break;
+                case Shape.PIPE_OUTLET_LEFT:
+                  flowWidth = -remaining;
+                  break;
+                case Shape.PIPE_OUTLET_RIGHT:
+                  flowWidth = remaining;
+                  break;
+              }
+              drawRect(
+                width,
+                x * PIPE_SIZE + 2,
+                y * PIPE_SIZE + 2,
+                flowWidth,
+                flowHeight,
+                0xff00ff00
+              );
+            }
+          }
+        }
+      }
     }
   }
 
   for (let i: u8 = 0; i < Queue.MAX; i++) {
     let shape = Queue.getShape(i);
-    renderPipe(offsetCanvas + getPixelOffset(0, i * 5, width), width, shape);
+    renderPipe(World.OFFSET_CANVAS + getPixelOffset(0, i * 5, width), width, shape);
   }
 
   let startX = World.cursorPositionX * PIPE_SIZE;
@@ -207,14 +292,18 @@ export function render(width: i32, height: i32): void {
   drawRect(width, startX, startY + end, 1, 1, 0xffff00ff);
   drawRect(width, startX + end, startY + end, 1, 1, 0xffff00ff);
 
-  let time = getTime();
-  let fullProgressWidth = World.gridSizeX * PIPE_SIZE;
+  let fullProgressWidth: i32 = World.gridSizeX * PIPE_SIZE;
   if (World.countdownEnd > time) {
-    let percentage = (<f32>World.countdownEnd - <f32>time) / <f32>World.countdownTotal;
+    let percentage: f32 =
+      <f32>1 - (<f32>World.countdownEnd - <f32>time) / <f32>World.countdownTotal;
     let pixelWidth: i32 = <i32>(percentage * <f32>fullProgressWidth);
+    drawRect(width, 0, World.gridSizeY * PIPE_SIZE, fullProgressWidth, 1, 0xff000000);
     drawRect(width, 0, World.gridSizeY * PIPE_SIZE, pixelWidth, 1, 0xff00ff00);
-    drawRect(width, 0, World.gridSizeY * PIPE_SIZE, fullProgressWidth - pixelWidth, 1, 0xff000000);
   } else {
-    drawRect(width, 0, World.gridSizeY * PIPE_SIZE, fullProgressWidth, 1, 0xff0000ff);
+    if (World.gameOver) {
+      drawRect(width, 0, World.gridSizeY * PIPE_SIZE, fullProgressWidth, 1, 0xff0000ff);
+    } else {
+      drawRect(width, 0, World.gridSizeY * PIPE_SIZE, fullProgressWidth, 1, 0xff00ff00);
+    }
   }
 }

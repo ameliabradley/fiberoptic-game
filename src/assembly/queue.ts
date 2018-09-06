@@ -1,14 +1,10 @@
 import { World } from "./game";
-import * as Pipe from "./pipe";
 import * as Shape from "./shape";
 import { randomInt } from "./util";
 
 export const MAX: u8 = 5;
-let index: u8 = 0;
-// let length: u8 = 0;
-
 const SHAPE_OFFSET = 0;
-const SIZE = MAX * sizeof<u8>();
+export const SIZE: usize = MAX * sizeof<u8>();
 
 const getStartOffset = (index: usize): usize => World.OFFSET_QUEUE_ARRAY + index * SIZE;
 
