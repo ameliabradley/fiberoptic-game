@@ -210,7 +210,7 @@ export function render(width: i32, height: i32, time: i32): void {
             if (percentage > 1) percentage = 1;
             let pixelWidth: i32 = <i32>(percentage * <f32>PIPE_SIZE);
 
-            {
+            if ((pipeShape & Shape.PIPE_START) === 0) {
               let startX = 0;
               let startY = 0;
               let flowHeight = 1;

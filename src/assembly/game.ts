@@ -49,30 +49,44 @@ export function setupWorld(sizeX: i32, sizeY: i32): void {
   let maxX = sizeX - 1;
   let maxY = sizeY - 1;
 
-  let sideIndex = getRandomSide(sizeX, sizeY);
+  World.countdownEnd = getTime() + World.countdownTotal;
 
   // TODO: Start from start... end at end..
-  /*
+  let sideIndex = getRandomSide(sizeX, sizeY);
   let startX = sideIndex % sizeX;
   let startY = (sideIndex - startX) / sizeX;
   let startOptions = getValidOutlets(startX, startY, maxX, maxY);
   let startDirection = getRandomSetBit(startOptions);
   Pipe.saveShape(sideIndex, startDirection | Shape.PIPE_START);
+  Pipe.startFlowFrom(
+    Pipe.getIndex(startX, startY, sizeX),
+    Shape.PIPE_OUTLET_LEFT,
+    World.countdownEnd
+  );
 
   let endX = maxX - startX;
   let endY = maxY - startY;
   let endOptions = getValidOutlets(endX, endY, maxX, maxY);
   let endDirection = getRandomSetBit(endOptions);
   Pipe.saveShape(endX + endY * sizeX, endDirection | Shape.PIPE_END);
+
+  /*
+  Pipe.saveShape(Pipe.getIndex(2, 2, sizeX), Shape.PIPE_OUTLET_RIGHT | Shape.PIPE_START);
+  Pipe.saveShape(Pipe.getIndex(3, 2, sizeX), Shape.PIPE_OUTLET_RIGHT | Shape.PIPE_OUTLET_LEFT);
+  Pipe.saveShape(Pipe.getIndex(4, 2, sizeX), Shape.PIPE_END | Shape.PIPE_OUTLET_LEFT);
+  Pipe.startFlowFrom(Pipe.getIndex(2, 2, sizeX), Shape.PIPE_OUTLET_LEFT, World.countdownEnd);
   */
 
-  World.countdownEnd = getTime() + World.countdownTotal;
-
   // Testing
-  Pipe.saveShape(0, Shape.PIPE_OUTLET_LEFT | Shape.PIPE_OUTLET_RIGHT);
-  Pipe.startFlowFrom(0, Shape.PIPE_OUTLET_LEFT, World.countdownEnd);
-  Pipe.saveShape(1, Shape.PIPE_OUTLET_LEFT | Shape.PIPE_OUTLET_RIGHT);
-  Pipe.saveShape(2, Shape.PIPE_OUTLET_LEFT | Shape.PIPE_OUTLET_RIGHT);
+  /*
+  Pipe.saveShape(sizeX + 0, Shape.PIPE_OUTLET_LEFT | Shape.PIPE_OUTLET_RIGHT);
+  Pipe.startFlowFrom(sizeX + 0, Shape.PIPE_OUTLET_LEFT, World.countdownEnd);
+  Pipe.saveShape(sizeX + 1, Shape.PIPE_OUTLET_CROSS);
+  Pipe.saveShape(sizeX + 2, Shape.PIPE_OUTLET_LEFT | Shape.PIPE_OUTLET_BOTTOM);
+  Pipe.saveShape(sizeX + sizeX + 2, Shape.PIPE_OUTLET_LEFT | Shape.PIPE_OUTLET_TOP);
+  Pipe.saveShape(sizeX + sizeX + 1, Shape.PIPE_OUTLET_RIGHT | Shape.PIPE_OUTLET_TOP);
+  Pipe.saveShape(1, Shape.PIPE_OUTLET_RIGHT | Shape.PIPE_OUTLET_BOTTOM);
+  */
 }
 
 export function updateTime(time: i32): void {
@@ -172,12 +186,14 @@ export function step(width: i32, height: i32, time: i32): void {
         let burstX =
           x + (burst & Shape.PIPE_OUTLET_LEFT ? -1 : burst & Shape.PIPE_OUTLET_RIGHT ? 1 : 0);
 
+        logi(2222);
         if (outOfBounds(burstX, burstY)) {
           showGameOver();
         } else {
           let index = Pipe.getIndex(burstX, burstY, World.gridSizeX);
           let shape = Pipe.getShape(index);
           let inlet = getInlet(burst);
+          logi(inlet);
           if (shape > 0 && (inlet & shape) > 0) {
             Pipe.startFlowFrom(index, inlet, time);
           } else {

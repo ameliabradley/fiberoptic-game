@@ -57,13 +57,17 @@ export function getFlowStart(index: i32, direction: u8): i32 {
 }
 
 export function getOutlet(shape: u8, flowFrom: u8): u8 {
+  if (shape & Shape.PIPE_START) {
+    return shape & 0b1111;
+  }
+
   if (shape === Shape.PIPE_OUTLET_CROSS) {
     if (flowFrom === Shape.PIPE_OUTLET_TOP) return Shape.PIPE_OUTLET_BOTTOM;
     if (flowFrom === Shape.PIPE_OUTLET_BOTTOM) return Shape.PIPE_OUTLET_TOP;
     if (flowFrom === Shape.PIPE_OUTLET_LEFT) return Shape.PIPE_OUTLET_RIGHT;
     return Shape.PIPE_OUTLET_LEFT;
   } else {
-    return flowFrom ^ shape;
+    return flowFrom ^ (shape & 0b1111);
   }
 }
 
