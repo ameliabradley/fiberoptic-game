@@ -269,14 +269,17 @@ export function render(width: i32, height: i32, time: i32): void {
                   flowWidth = remaining;
                   break;
               }
-              drawRect(
-                width,
-                x * PIPE_SIZE + startX + OFFSET_GRID_X,
-                y * PIPE_SIZE + startY,
-                flowWidth,
-                flowHeight,
-                PIPE_CONTENTS_COLOR
-              );
+
+              if (outlet) {
+                drawRect(
+                  width,
+                  x * PIPE_SIZE + startX + OFFSET_GRID_X,
+                  y * PIPE_SIZE + startY,
+                  flowWidth,
+                  flowHeight,
+                  PIPE_CONTENTS_COLOR
+                );
+              }
             }
           }
         }
