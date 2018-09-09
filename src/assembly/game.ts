@@ -23,6 +23,9 @@ export class World {
   static readonly countdownTotal: i32 = 1000 * 15;
   static gameOver: boolean = false;
 
+  static flowMultiplier: i32 = 1;
+  static isWinning: bool = false;
+
   static OFFSET_PIPE_ARRAY: usize = HEAP_BASE;
   static OFFSET_QUEUE_ARRAY: usize;
   static OFFSET_CANVAS: usize;
@@ -51,7 +54,6 @@ export function setupWorld(sizeX: i32, sizeY: i32): void {
 
   World.countdownEnd = getTime() + World.countdownTotal;
 
-  // TODO: Start from start... end at end..
   let sideIndex = getRandomSide(sizeX, sizeY);
   let startX = sideIndex % sizeX;
   let startY = (sideIndex - startX) / sizeX;
@@ -80,18 +82,20 @@ export function setupWorld(sizeX: i32, sizeY: i32): void {
   */
 
   /*
-  Pipe.saveShape(Pipe.getIndex(2, 2, sizeX), Shape.PIPE_OUTLET_RIGHT | Shape.PIPE_START);
+  Pipe.saveShape(Pipe.getIndex(2, 2, sizeX), Shape.PIPE_OUTLET_RIGHT | Shape.PIPE_END);
   Pipe.saveShape(Pipe.getIndex(3, 2, sizeX), Shape.PIPE_OUTLET_LEFT | Shape.PIPE_OUTLET_BOTTOM);
   Pipe.saveShape(
     Pipe.getIndex(3, 3, sizeX),
     Shape.PIPE_OUTLET_LEFT | Shape.PIPE_OUTLET_TOP | Shape.PIPE_BLOCKED
   );
   Pipe.startFlowFrom(Pipe.getIndex(2, 2, sizeX), Shape.PIPE_OUTLET_LEFT, World.countdownEnd);
+  */
 
-  Pipe.saveShape(Pipe.getIndex(2, 2, sizeX), Shape.PIPE_OUTLET_RIGHT | Shape.PIPE_START);
-  Pipe.saveShape(Pipe.getIndex(3, 2, sizeX), Shape.PIPE_OUTLET_RIGHT | Shape.PIPE_OUTLET_LEFT);
-  Pipe.saveShape(Pipe.getIndex(4, 2, sizeX), Shape.PIPE_END | Shape.PIPE_OUTLET_LEFT);
-  Pipe.startFlowFrom(Pipe.getIndex(2, 2, sizeX), Shape.PIPE_OUTLET_LEFT, World.countdownEnd);
+  /*
+  Pipe.saveShape(Pipe.getIndex(2, 2, sizeX), Shape.PIPE_OUTLET_RIGHT | Shape.PIPE_END);
+  // Pipe.saveShape(Pipe.getIndex(3, 2, sizeX), Shape.PIPE_OUTLET_CROSS | Shape.PIPE_BLOCKED);
+  Pipe.saveShape(Pipe.getIndex(4, 2, sizeX), Shape.PIPE_START | Shape.PIPE_OUTLET_LEFT);
+  Pipe.startFlowFrom(Pipe.getIndex(4, 2, sizeX), Shape.PIPE_OUTLET_RIGHT, World.countdownEnd);
   */
 
   // Testing
@@ -139,12 +143,61 @@ export function setKeys(char: i8): void {
   }
 
   if (char & Keys.FLAG_SPACE) {
-    let index = World.cursorPositionX + World.cursorPositionY * World.gridSizeX;
-    if (Pipe.validPlacementLocation(index)) {
-      let newShape = Queue.pop();
-      Pipe.saveShape(index, newShape);
+    if (!World.isWinning) {
+      let index = World.cursorPositionX + World.cursorPositionY * World.gridSizeX;
+      if (Pipe.validPlacementLocation(index)) {
+        let newShape = Queue.pop();
+        Pipe.saveShape(index, newShape);
+
+        let winningMove = areAllStartFlowsConnectedToEndFlows();
+        if (winningMove) {
+          World.flowMultiplier = 8;
+          World.isWinning = true;
+        }
+      }
     }
   }
+}
+
+function areAllStartFlowsConnectedToEndFlows(): bool {
+  for (let x = 0; x < World.gridSizeX; x++) {
+    for (let y = 0; y < World.gridSizeY; y++) {
+      let index = Pipe.getIndex(x, y, World.gridSizeX);
+      let shape = Pipe.getShape(index);
+      if (shape & Shape.PIPE_START) {
+        if (!flowConnected(index, shape)) {
+          return false;
+        }
+      }
+    }
+  }
+
+  return true;
+}
+
+function flowConnected(index: i32, flowFrom: u8): bool {
+  let x = Pipe.getXFromIndex(index, World.gridSizeX);
+  let y = Pipe.getYFromIndex(index, World.gridSizeX);
+
+  let shape = Pipe.getShape(index);
+
+  let outlet = Pipe.getOutlet(shape, flowFrom);
+  let burstY = getBurstY(outlet, y);
+  let burstX = getBurstX(outlet, x);
+  if (!outOfBounds(burstX, burstY)) {
+    let burstIndex = Pipe.getIndex(burstX, burstY, World.gridSizeX);
+    let outletShape = Pipe.getShape(burstIndex);
+    let inlet = getInletFromOutlet(outlet);
+    if (outletShape > 0 && (inlet & outletShape) > 0) {
+      if (outletShape & Shape.PIPE_END) {
+        return true;
+      }
+
+      return flowConnected(burstIndex, inlet);
+    }
+  }
+
+  return false;
 }
 
 export function getOffsetCanvas(): i32 {
@@ -163,7 +216,7 @@ function outOfBounds(x: i32, y: i32): bool {
   return false;
 }
 
-function getInlet(outlet: u8): u8 {
+function getInletFromOutlet(outlet: u8): u8 {
   switch (outlet) {
     case Shape.PIPE_OUTLET_BOTTOM:
       return Shape.PIPE_OUTLET_TOP;
@@ -184,7 +237,7 @@ export function step(width: i32, height: i32, time: i32): void {
       for (let y = 0; y < World.gridSizeY; y++) {
         let index = Pipe.getIndex(x, y, World.gridSizeX);
         let shape = Pipe.getShape(index);
-        let inlet = getInlet(burst);
+        let inlet = getInletFromOutlet(burst);
         if (shape & Shape.PIPE_START) {
           Pipe.startFlowFrom(index, Shape.PIPE_OUTLET_LEFT, );
         }
@@ -196,19 +249,17 @@ export function step(width: i32, height: i32, time: i32): void {
   for (let x = 0; x < World.gridSizeX; x++) {
     for (let y = 0; y < World.gridSizeY; y++) {
       let index = Pipe.getIndex(x, y, World.gridSizeX);
-      let burst: u8 = Pipe.checkBurst(index, time);
+      let burst: u8 = Pipe.checkBurst(index, time, World.flowMultiplier);
       if (burst > 0) {
-        let burstY =
-          y + (burst & Shape.PIPE_OUTLET_TOP ? -1 : burst & Shape.PIPE_OUTLET_BOTTOM ? 1 : 0);
-        let burstX =
-          x + (burst & Shape.PIPE_OUTLET_LEFT ? -1 : burst & Shape.PIPE_OUTLET_RIGHT ? 1 : 0);
+        let burstY = getBurstY(burst, y);
+        let burstX = getBurstX(burst, x);
 
         if (outOfBounds(burstX, burstY)) {
           showGameOver();
         } else {
           let index = Pipe.getIndex(burstX, burstY, World.gridSizeX);
           let shape = Pipe.getShape(index);
-          let inlet = getInlet(burst);
+          let inlet = getInletFromOutlet(burst);
           if (shape > 0 && (inlet & shape) > 0) {
             Pipe.startFlowFrom(index, inlet, time);
           } else {
@@ -220,4 +271,12 @@ export function step(width: i32, height: i32, time: i32): void {
   }
 
   render(width, height, time);
+}
+
+function getBurstX(burst: u8, x: i32): i32 {
+  return x + (burst & Shape.PIPE_OUTLET_LEFT ? -1 : burst & Shape.PIPE_OUTLET_RIGHT ? 1 : 0);
+}
+
+function getBurstY(burst: u8, y: i32): i32 {
+  return y + (burst & Shape.PIPE_OUTLET_TOP ? -1 : burst & Shape.PIPE_OUTLET_BOTTOM ? 1 : 0);
 }

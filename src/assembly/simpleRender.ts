@@ -207,7 +207,8 @@ export function render(width: i32, height: i32, time: i32): void {
         if (flowFrom > 0) {
           let flowStart = Pipe.getFlowStart(index, flowFrom);
           if (flowStart < time) {
-            let percentage: f32 = (<f32>time - <f32>flowStart) / <f32>Pipe.BURST_TIME;
+            let percentage: f32 =
+              (<f32>time - <f32>flowStart) / <f32>(Pipe.BURST_TIME / World.flowMultiplier);
             if (percentage > 1) percentage = 1;
             let pixelWidth: i32 = <i32>(percentage * <f32>PIPE_SIZE);
 

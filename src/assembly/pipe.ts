@@ -29,6 +29,14 @@ export function getIndex(x: i32, y: i32, gridSizeX: i32): i32 {
   return y * gridSizeX + x;
 }
 
+export function getXFromIndex(index: i32, gridSizeX: i32): i32 {
+  return index % gridSizeX;
+}
+
+export function getYFromIndex(index: i32, gridSizeY: i32): i32 {
+  return index / gridSizeY;
+}
+
 export function getFlowFrom(index: usize, flowIndex: i32): u8 {
   return load<u8>(getStartOffset(index) + FLOW1_TYPE_OFFSET + flowIndex * sizeof<DOUBLESHAPE>());
 }
@@ -61,21 +69,28 @@ export function getOutlet(shape: u8, flowFrom: u8): u8 {
     return shape & 0b1111;
   }
 
-  if (shape === Shape.PIPE_OUTLET_CROSS) {
+  let onlyShape: i8 = (shape as u8) & 0b1111;
+  if (onlyShape === Shape.PIPE_OUTLET_CROSS) {
     if (flowFrom === Shape.PIPE_OUTLET_TOP) return Shape.PIPE_OUTLET_BOTTOM;
     if (flowFrom === Shape.PIPE_OUTLET_BOTTOM) return Shape.PIPE_OUTLET_TOP;
     if (flowFrom === Shape.PIPE_OUTLET_LEFT) return Shape.PIPE_OUTLET_RIGHT;
     return Shape.PIPE_OUTLET_LEFT;
   } else {
-    return flowFrom ^ (shape & 0b1111);
+    return flowFrom ^ onlyShape;
   }
 }
 
-function checkBurstSide(flowTimeOffset: usize, flowTypeOffset: usize, index: usize, time: i32): u8 {
+function checkBurstSide(
+  flowTimeOffset: usize,
+  flowTypeOffset: usize,
+  index: usize,
+  time: i32,
+  flowMultiplier: i32
+): u8 {
   let offset = getStartOffset(index) + flowTimeOffset;
   let startTime = load<i32>(offset);
   if (startTime > 0) {
-    if (startTime + BURST_TIME < time) {
+    if (startTime + BURST_TIME / flowMultiplier < time) {
       store<i32>(offset, 0);
       let flowFrom = <u8>load<u8>(getStartOffset(index) + flowTypeOffset);
       let shape = getShape(index);
@@ -86,10 +101,10 @@ function checkBurstSide(flowTimeOffset: usize, flowTypeOffset: usize, index: usi
   return 0;
 }
 
-export function checkBurst(index: usize, time: i32): u8 {
+export function checkBurst(index: usize, time: i32, flowMultiplier: i32): u8 {
   return (
-    checkBurstSide(FLOW1_START_TIME_OFFSET, FLOW1_TYPE_OFFSET, index, time) |
-    checkBurstSide(FLOW2_START_TIME_OFFSET, FLOW2_TYPE_OFFSET, index, time)
+    checkBurstSide(FLOW1_START_TIME_OFFSET, FLOW1_TYPE_OFFSET, index, time, flowMultiplier) |
+    checkBurstSide(FLOW2_START_TIME_OFFSET, FLOW2_TYPE_OFFSET, index, time, flowMultiplier)
   );
 }
 
