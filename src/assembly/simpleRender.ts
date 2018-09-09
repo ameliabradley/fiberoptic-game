@@ -295,14 +295,8 @@ export function render(width: i32, height: i32, time: i32): void {
 function drawCursor(width: i32, height: i32, time: i32): void {
   let index = Pipe.getIndex(World.cursorPositionX, World.cursorPositionY, World.gridSizeX);
   let validPlacement = Pipe.validPlacementLocation(index);
-  let color = validPlacement ? 0xffff00ff : 0xff0000ff;
   let startX = World.cursorPositionX * PIPE_SIZE;
   let startY = World.cursorPositionY * PIPE_SIZE;
-  let end = PIPE_SIZE - 1;
-  drawRect(width, startX + OFFSET_GRID_X, startY, 1, 1, color);
-  drawRect(width, startX + OFFSET_GRID_X + end, startY, 1, 1, color);
-  drawRect(width, startX + OFFSET_GRID_X, startY + end, 1, 1, color);
-  drawRect(width, startX + OFFSET_GRID_X + end, startY + end, 1, 1, color);
 
   if (validPlacement) {
     let shape = Queue.getShape(0);
@@ -312,6 +306,13 @@ function drawCursor(width: i32, height: i32, time: i32): void {
       shape
     );
   }
+
+  let color = validPlacement ? 0xffff00ff : 0xff0000ff;
+  let end = PIPE_SIZE - 1;
+  drawRect(width, startX + OFFSET_GRID_X, startY, 1, 1, color);
+  drawRect(width, startX + OFFSET_GRID_X + end, startY, 1, 1, color);
+  drawRect(width, startX + OFFSET_GRID_X, startY + end, 1, 1, color);
+  drawRect(width, startX + OFFSET_GRID_X + end, startY + end, 1, 1, color);
 }
 
 function drawQueue(width: i32): void {
