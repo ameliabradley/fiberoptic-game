@@ -8,3 +8,4 @@ export const PIPE_OUTLET_CROSS: u8 =
 
 export const PIPE_START: u8 = 1 << 4;
 export const PIPE_END: u8 = 1 << 5;
+export const PIPE_BLOCKED: u8 = 1 << 6;

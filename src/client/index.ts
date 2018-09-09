@@ -6,16 +6,32 @@ import * as Keyboard from "../shared/keyboard";
 var cnv = document.getElementsByTagName("canvas")[0];
 
 var ctx = cnv.getContext("2d");
+let width: number;
+let height: number;
+let canvasByteSize: number;
+let size: number;
+let imageData: ImageData;
+let argb: Uint32Array;
 
-var width = 50;
-var height = 50;
-cnv.width = width;
-cnv.height = height;
+function updateSize() {
+  width = 240;
+  height = 200;
 
-ctx.imageSmoothingEnabled = false;
+  cnv.width = width;
+  cnv.height = height;
 
-var size = height * width;
-var canvasByteSize = (size + size) << 2; // 4b per pixel (X << N is the same as X * 2 ^ N)
+  ctx.imageSmoothingEnabled = false;
+
+  size = height * width;
+  canvasByteSize = (size + size) << 2; // 4b per pixel (X << N is the same as X * 2 ^ N)
+
+  // render the output at [size, 2*size]
+  imageData = ctx.createImageData(width, height);
+  argb = new Uint32Array(imageData.data.buffer);
+}
+
+updateSize();
+window.onresize = updateSize;
 
 // TODO: Update this on release to the number of bytes we expect the internal memory to take up
 var memByteSize = 500;
@@ -83,14 +99,11 @@ fetch("module.untouched.wasm")
   )
   .then(results => {
     exports = results.instance.exports;
-    exports.setupWorld(8, 8, height, width);
+    exports.setupWorld(10, 8);
 
     var offsetCanvas = exports.getOffsetCanvas();
     var mem = new Uint32Array(memory.buffer, offsetCanvas);
 
-    // Keep rendering the output at [size, 2*size]
-    var imageData = ctx.createImageData(width, height);
-    var argb = new Uint32Array(imageData.data.buffer);
     (function render() {
       requestAnimationFrame(render);
       exports.step(width, height, Math.floor(performance.now()));

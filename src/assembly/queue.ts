@@ -20,14 +20,21 @@ function fillWithRandomShape(index: i32): void {
 
   // prettier-ignore
   switch (option) {
-      case 0: shape = Shape.PIPE_OUTLET_LEFT | Shape.PIPE_OUTLET_TOP; break;
-      case 1: shape = Shape.PIPE_OUTLET_RIGHT | Shape.PIPE_OUTLET_TOP; break;
-      case 2: shape = Shape.PIPE_OUTLET_LEFT | Shape.PIPE_OUTLET_BOTTOM; break;
-      case 3: shape = Shape.PIPE_OUTLET_RIGHT | Shape.PIPE_OUTLET_BOTTOM; break;
-      case 4: shape = Shape.PIPE_OUTLET_CROSS; break;
-      case 5: shape = Shape.PIPE_OUTLET_RIGHT | Shape.PIPE_OUTLET_LEFT; break;
-      case 6: shape = Shape.PIPE_OUTLET_TOP | Shape.PIPE_OUTLET_BOTTOM; break;
-    }
+    case 0: shape = Shape.PIPE_OUTLET_LEFT | Shape.PIPE_OUTLET_TOP; break;
+    case 1: shape = Shape.PIPE_OUTLET_RIGHT | Shape.PIPE_OUTLET_TOP; break;
+    case 2: shape = Shape.PIPE_OUTLET_LEFT | Shape.PIPE_OUTLET_BOTTOM; break;
+    case 3: shape = Shape.PIPE_OUTLET_RIGHT | Shape.PIPE_OUTLET_BOTTOM; break;
+    case 4: shape = Shape.PIPE_OUTLET_CROSS; break;
+    case 5: shape = Shape.PIPE_OUTLET_RIGHT | Shape.PIPE_OUTLET_LEFT; break;
+    case 6: shape = Shape.PIPE_OUTLET_TOP | Shape.PIPE_OUTLET_BOTTOM; break;
+  }
+
+  let randomAttribute: u8 = randomInt(0, 12) as u8;
+  switch (randomAttribute) {
+    case 0:
+      shape = shape | Shape.PIPE_BLOCKED;
+      break;
+  }
 
   storeShape(index, shape);
 }

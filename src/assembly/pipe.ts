@@ -92,3 +92,18 @@ export function checkBurst(index: usize, time: i32): u8 {
     checkBurstSide(FLOW2_START_TIME_OFFSET, FLOW2_TYPE_OFFSET, index, time)
   );
 }
+
+export function validPlacementLocation(index: usize): boolean {
+  let shape = getShape(index);
+  if (shape & Shape.PIPE_BLOCKED) return false;
+  if (shape & Shape.PIPE_START) return false;
+  if (shape & Shape.PIPE_END) return false;
+
+  let flow1 = getFlowFrom(index, 0);
+  if (flow1 > 0) return false;
+
+  let flow2 = getFlowFrom(index, 1);
+  if (flow2 > 0) return false;
+
+  return true;
+}

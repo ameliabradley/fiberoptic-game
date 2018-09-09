@@ -71,6 +71,23 @@ export function setupWorld(sizeX: i32, sizeY: i32): void {
   Pipe.saveShape(endX + endY * sizeX, endDirection | Shape.PIPE_END);
 
   /*
+  Pipe.saveShape(Pipe.getIndex(2, 1, sizeX), Shape.PIPE_OUTLET_TOP);
+  Pipe.saveShape(Pipe.getIndex(2, 2, sizeX), Shape.PIPE_OUTLET_BOTTOM);
+  Pipe.saveShape(Pipe.getIndex(2, 3, sizeX), Shape.PIPE_OUTLET_LEFT);
+  Pipe.saveShape(Pipe.getIndex(2, 4, sizeX), Shape.PIPE_OUTLET_RIGHT);
+  Pipe.saveShape(Pipe.getIndex(2, 5, sizeX), Shape.PIPE_OUTLET_TOP | Shape.PIPE_OUTLET_BOTTOM);
+  Pipe.saveShape(Pipe.getIndex(2, 6, sizeX), Shape.PIPE_OUTLET_CROSS);
+  */
+
+  /*
+  Pipe.saveShape(Pipe.getIndex(2, 2, sizeX), Shape.PIPE_OUTLET_RIGHT | Shape.PIPE_START);
+  Pipe.saveShape(Pipe.getIndex(3, 2, sizeX), Shape.PIPE_OUTLET_LEFT | Shape.PIPE_OUTLET_BOTTOM);
+  Pipe.saveShape(
+    Pipe.getIndex(3, 3, sizeX),
+    Shape.PIPE_OUTLET_LEFT | Shape.PIPE_OUTLET_TOP | Shape.PIPE_BLOCKED
+  );
+  Pipe.startFlowFrom(Pipe.getIndex(2, 2, sizeX), Shape.PIPE_OUTLET_LEFT, World.countdownEnd);
+
   Pipe.saveShape(Pipe.getIndex(2, 2, sizeX), Shape.PIPE_OUTLET_RIGHT | Shape.PIPE_START);
   Pipe.saveShape(Pipe.getIndex(3, 2, sizeX), Shape.PIPE_OUTLET_RIGHT | Shape.PIPE_OUTLET_LEFT);
   Pipe.saveShape(Pipe.getIndex(4, 2, sizeX), Shape.PIPE_END | Shape.PIPE_OUTLET_LEFT);
@@ -123,9 +140,9 @@ export function setKeys(char: i8): void {
 
   if (char & Keys.FLAG_SPACE) {
     let index = World.cursorPositionX + World.cursorPositionY * World.gridSizeX;
-    if (Pipe.getShape(index) === Shape.PIPE_OUTLET_NONE) {
-      let shape = Queue.pop();
-      Pipe.saveShape(index, shape);
+    if (Pipe.validPlacementLocation(index)) {
+      let newShape = Queue.pop();
+      Pipe.saveShape(index, newShape);
     }
   }
 }
@@ -186,18 +203,15 @@ export function step(width: i32, height: i32, time: i32): void {
         let burstX =
           x + (burst & Shape.PIPE_OUTLET_LEFT ? -1 : burst & Shape.PIPE_OUTLET_RIGHT ? 1 : 0);
 
-        logi(2222);
         if (outOfBounds(burstX, burstY)) {
           showGameOver();
         } else {
           let index = Pipe.getIndex(burstX, burstY, World.gridSizeX);
           let shape = Pipe.getShape(index);
           let inlet = getInlet(burst);
-          logi(inlet);
           if (shape > 0 && (inlet & shape) > 0) {
             Pipe.startFlowFrom(index, inlet, time);
           } else {
-            logi(-100);
             showGameOver();
           }
         }
