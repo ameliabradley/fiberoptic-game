@@ -3,11 +3,7 @@ import * as Shape from "./shape";
 import * as Pipe from "./pipe";
 import * as Queue from "./queue";
 import { getTime, logi, logf } from "./imports";
-
-const ORIENTATION_NORMAL: i8 = 0b000;
-const ORIENTATION_REVERSE_X: i8 = 0b001;
-const ORIENTATION_REVERSE_Y: i8 = 0b010;
-const ORIENTATION_ROTATE: i8 = 0b100;
+import { getLetterFromChar } from "./tinyFont";
 
 const PIPE_SIZE = 20;
 const PIPE_RADIUS = 4;
@@ -15,36 +11,45 @@ const PIPE_ENDPOINT = 14;
 
 const PIXEL_SIZE = sizeof<i32>();
 
-function getPos(color: i32, pos: i32): u8 {
+function getPos(color: i32, pos: i32): f32 {
   let offset = 24 - pos * 8;
-  return ((color & (0xff << offset)) >> offset) as u8;
+  return <f32>((color & (0xff << offset)) >>> offset);
 }
 
-function renderPixel(offset: i32, color: i32): void {
-  // if ((color & 0xff000000) === 0xff000000) {
-  store<i32>(offset, color);
-  /*
+function getPosColor(color: f32, alpha: f32, inv_alpha: f32, bg: i32, pos: i32): u8 {
+  let fg = alpha * getPos(<i32>color, pos);
+  let bga = inv_alpha * getPos(bg, pos);
+  // logf(fg);
+  return (fg + bga) as u8;
+}
+
+function renderPixel(offset: i32, color: i32, alpha: boolean = false): void {
+  if (alpha) {
+    if ((color & 0xff000000) === 0xff000000) {
+      store<i32>(offset, color);
+    } else {
+      let bg: i32 = load<i32>(offset);
+
+      let fg3 = getPos(color, 0);
+
+      let alpha: f32 = fg3 / 255;
+      let inv_alpha: f32 = (256 - fg3) / 255;
+
+      let b: u8 = getPosColor(<f32>color, alpha, inv_alpha, bg, 1);
+      let g: u8 = getPosColor(<f32>color, alpha, inv_alpha, bg, 2);
+      let r: u8 = getPosColor(<f32>color, alpha, inv_alpha, bg, 3);
+
+      let result: i32 = 0xff000000 + ((<i32>b) << 16) + ((<i32>g) << 8) + r;
+
+      store<i32>(offset, result);
+    }
   } else {
-    // FIXME: ... Not working
-    let bg: i32 = load<i32>(offset);
-
-    let fg3 = getPos(color, 0);
-
-    let alpha: i32 = fg3 + 1;
-    let inv_alpha: i32 = 256 - fg3;
-
-    let b: u8 = ((alpha * getPos(color, 1) + inv_alpha * getPos(bg, 1)) >> 8) as u8;
-    let g: u8 = ((alpha * getPos(color, 2) + inv_alpha * getPos(bg, 2)) >> 8) as u8;
-    let r: u8 = ((alpha * getPos(color, 3) + inv_alpha * getPos(bg, 3)) >> 8) as u8;
-
-    let result: i32 = 0xff000000 + (b << 16) + (g << 8) + r;
-
-    store<i32>(offset, result);
+    store<i32>(offset, color);
   }
-  */
 }
 
-const OFFSET_GRID_X = PIPE_SIZE;
+const OFFSET_GRID_X = PIPE_SIZE + 3;
+const OFFSET_GRID_Y = 4;
 
 function getPixelOffset(x: i32, y: i32, width: i32): i32 {
   return (x + y * width) * PIXEL_SIZE;
@@ -55,15 +60,17 @@ const COLOR_END = 0xff5757c3; //c35757; // 0xff0000ff;
 
 const PIPE_COLOR = 0xff0f84bf; //bf840f; // 0xff808080;
 const PIPE_INSIDE_COLOR = 0xff3d4e57;
-const BACKGROUND_COLOR = 0xff4b4b4d; // 4d4b4b; // 0xff000000;
+const BACKGROUND_COLOR = 0x00000000; // 0xff4b4b4d; // 4d4b4b; // 0xff000000;
 
 const PIPE_CONTENTS_COLOR = 0xff00f7ff; // fff700
 
 const PIPE_BLOCKED_BORDER = 0xffa3b0b0;
 const PIPE_BLOCKED_BACKGROUND = 0xff787878;
 
-function renderPipe(offset: i32, width: i32, pipeShape: i32): void {
+function renderPipe(offset: i32, width: i32, pipeShape: i32, isCursor: boolean = false): void {
   let onlyShape: i8 = (pipeShape as u8) & 0b1111;
+  let insideColor: i32 = isCursor ? 0xaa574f3d : PIPE_INSIDE_COLOR;
+  let pipeColor: i32 = isCursor ? 0xaa805f2d : PIPE_COLOR;
 
   if (pipeShape & Shape.PIPE_BLOCKED) {
     drawRectOffset(width, offset, PIPE_SIZE, PIPE_SIZE, PIPE_BLOCKED_BORDER);
@@ -83,7 +90,7 @@ function renderPipe(offset: i32, width: i32, pipeShape: i32): void {
       offset + getPixelOffset(6, 0, width),
       PIPE_RADIUS * 2,
       PIPE_ENDPOINT,
-      PIPE_COLOR
+      pipeColor
     );
   }
 
@@ -93,7 +100,7 @@ function renderPipe(offset: i32, width: i32, pipeShape: i32): void {
       offset + getPixelOffset(6, 6, width),
       PIPE_RADIUS * 2,
       PIPE_ENDPOINT,
-      PIPE_COLOR
+      pipeColor
     );
   }
 
@@ -103,7 +110,7 @@ function renderPipe(offset: i32, width: i32, pipeShape: i32): void {
       offset + getPixelOffset(0, 6, width),
       PIPE_ENDPOINT,
       PIPE_RADIUS * 2,
-      PIPE_COLOR
+      pipeColor
     );
   }
 
@@ -113,49 +120,25 @@ function renderPipe(offset: i32, width: i32, pipeShape: i32): void {
       offset + getPixelOffset(6, 6, width),
       PIPE_ENDPOINT,
       PIPE_RADIUS * 2,
-      PIPE_COLOR
+      pipeColor
     );
   }
 
   //
   if (onlyShape & Shape.PIPE_OUTLET_TOP) {
-    drawRectOffset(
-      width,
-      offset + getPixelOffset(7, 0, width),
-      6,
-      PIPE_ENDPOINT - 1,
-      PIPE_INSIDE_COLOR
-    );
+    drawRectOffset(width, offset + getPixelOffset(7, 0, width), 6, PIPE_ENDPOINT - 1, insideColor);
   }
 
   if (onlyShape & Shape.PIPE_OUTLET_BOTTOM) {
-    drawRectOffset(
-      width,
-      offset + getPixelOffset(7, 7, width),
-      6,
-      PIPE_ENDPOINT - 1,
-      PIPE_INSIDE_COLOR
-    );
+    drawRectOffset(width, offset + getPixelOffset(7, 7, width), 6, PIPE_ENDPOINT - 1, insideColor);
   }
 
   if (onlyShape & Shape.PIPE_OUTLET_LEFT) {
-    drawRectOffset(
-      width,
-      offset + getPixelOffset(0, 7, width),
-      PIPE_ENDPOINT - 1,
-      6,
-      PIPE_INSIDE_COLOR
-    );
+    drawRectOffset(width, offset + getPixelOffset(0, 7, width), PIPE_ENDPOINT - 1, 6, insideColor);
   }
 
   if (onlyShape & Shape.PIPE_OUTLET_RIGHT) {
-    drawRectOffset(
-      width,
-      offset + getPixelOffset(7, 7, width),
-      PIPE_ENDPOINT - 1,
-      6,
-      PIPE_INSIDE_COLOR
-    );
+    drawRectOffset(width, offset + getPixelOffset(7, 7, width), PIPE_ENDPOINT - 1, 6, insideColor);
   }
 
   if (pipeShape & (Shape.PIPE_START | Shape.PIPE_END)) {
@@ -187,17 +170,19 @@ function drawRectOffset(width: i32, offset: i32, sizeX: i32, sizeY: i32, color: 
 }
 
 export function render(width: i32, height: i32, time: i32): void {
-  drawRect(width, 0, 0, width, height, BACKGROUND_COLOR);
-
   let sizeX = World.gridSizeX;
   let sizeY = World.gridSizeY;
+
+  drawRect(width, 0, 0, width, height, BACKGROUND_COLOR);
+
   for (let x = 0; x < sizeX; x++) {
     for (let y = 0; y < sizeY; y++) {
       let index = Pipe.getIndex(x, y, World.gridSizeX);
       let pipeShape = Pipe.getShape(index);
 
       renderPipe(
-        World.OFFSET_CANVAS + getPixelOffset(x * PIPE_SIZE + OFFSET_GRID_X, y * PIPE_SIZE, width),
+        World.OFFSET_CANVAS +
+          getPixelOffset(x * PIPE_SIZE + OFFSET_GRID_X, y * PIPE_SIZE + OFFSET_GRID_Y, width),
         width,
         pipeShape
       );
@@ -240,7 +225,7 @@ export function render(width: i32, height: i32, time: i32): void {
               drawRect(
                 width,
                 x * PIPE_SIZE + startX + OFFSET_GRID_X,
-                y * PIPE_SIZE + startY,
+                y * PIPE_SIZE + startY + OFFSET_GRID_Y,
                 flowWidth,
                 flowHeight,
                 PIPE_CONTENTS_COLOR
@@ -275,7 +260,7 @@ export function render(width: i32, height: i32, time: i32): void {
                 drawRect(
                   width,
                   x * PIPE_SIZE + startX + OFFSET_GRID_X,
-                  y * PIPE_SIZE + startY,
+                  y * PIPE_SIZE + startY + OFFSET_GRID_Y,
                   flowWidth,
                   flowHeight,
                   PIPE_CONTENTS_COLOR
@@ -302,24 +287,38 @@ function drawCursor(width: i32, height: i32, time: i32): void {
   if (validPlacement) {
     let shape = Queue.getShape(0);
     renderPipe(
-      World.OFFSET_CANVAS + getPixelOffset(startX + OFFSET_GRID_X, startY, width),
+      World.OFFSET_CANVAS +
+        getPixelOffset(startX + OFFSET_GRID_X - 2, startY + OFFSET_GRID_Y - 2, width),
       width,
-      shape
+      shape,
+      true
     );
   }
 
   let color = validPlacement ? 0xffff00ff : 0xff0000ff;
   let end = PIPE_SIZE - 1;
-  drawRect(width, startX + OFFSET_GRID_X, startY, 1, 1, color);
-  drawRect(width, startX + OFFSET_GRID_X + end, startY, 1, 1, color);
-  drawRect(width, startX + OFFSET_GRID_X, startY + end, 1, 1, color);
-  drawRect(width, startX + OFFSET_GRID_X + end, startY + end, 1, 1, color);
+  drawRect(width, startX + OFFSET_GRID_X, startY + OFFSET_GRID_Y, 1, 1, color);
+  drawRect(width, startX + OFFSET_GRID_X + end, startY + OFFSET_GRID_Y, 1, 1, color);
+  drawRect(width, startX + OFFSET_GRID_X, startY + end + OFFSET_GRID_Y, 1, 1, color);
+  drawRect(width, startX + OFFSET_GRID_X + end, startY + end + OFFSET_GRID_Y, 1, 1, color);
 }
 
+const BORDER_COLOR = 0xff26323a;
 function drawQueue(width: i32): void {
+  drawRect(width, 0, 3, PIPE_SIZE + 2, PIPE_SIZE * Queue.MAX + 2, BORDER_COLOR);
+  drawRect(width, 1, 4, PIPE_SIZE, PIPE_SIZE * Queue.MAX, BACKGROUND_COLOR);
   for (let i: u8 = 0; i < Queue.MAX; i++) {
     let shape = Queue.getShape(i);
-    renderPipe(World.OFFSET_CANVAS + getPixelOffset(0, i * PIPE_SIZE, width), width, shape);
+    renderPipe(
+      World.OFFSET_CANVAS + getPixelOffset(1, (Queue.MAX - i - 1) * PIPE_SIZE + 4, width),
+      width,
+      shape
+    );
+  }
+
+  let queueLabel: Array<i32> = [81, 85, 69, 85, 69]; // QUEUE
+  for (let i = 0; i < queueLabel.length; i++) {
+    drawChar(queueLabel[i], width, 2 + i * 4, PIPE_SIZE * Queue.MAX + 7, BORDER_COLOR);
   }
 }
 
@@ -346,5 +345,23 @@ function drawProgressBar(width: i32, height: i32, time: i32): void {
       PROGRESSBAR_HEIGHT,
       World.gameOver ? PROGRESSBAR_COLOR_GAME_OVER : PROGRESSBAR_COLOR_GOOD
     );
+  }
+}
+
+export function drawChar(char: i32, width: i32, offsetX: i32, offsetY: i32, color: i32): void {
+  let letter = getLetterFromChar(char);
+  let shift: i16 = 0;
+
+  // 3x5
+  let baseOffset = World.OFFSET_CANVAS + getPixelOffset(offsetX, offsetY, width);
+  for (let y = 0; y < 5; y++) {
+    for (let x = 0; x < 3; x++) {
+      let on = letter & (1 << shift);
+      if (on) {
+        let offset = baseOffset + getPixelOffset(x, y, width);
+        renderPixel(offset, color);
+      }
+      shift++;
+    }
   }
 }
