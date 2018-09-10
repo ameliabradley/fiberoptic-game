@@ -82,7 +82,7 @@ window.addEventListener("keyup", e => {
   exports.setKeys(char);
 });
 
-fetch("module.untouched.wasm")
+fetch(window.location.hostname === "127.0.0.1" ? "module.untouched.wasm" : "module.optimized.wasm")
   .then(response => response.arrayBuffer())
   .then(bytes =>
     WebAssembly.instantiate(bytes, {
