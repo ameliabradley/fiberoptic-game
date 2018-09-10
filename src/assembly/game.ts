@@ -4,15 +4,16 @@ import * as Shape from "./shape";
 import * as Queue from "./queue";
 import * as Keys from "../shared/keyboard";
 import { getTime, logi } from "./imports";
-import { render } from "./simpleRender";
+import { render, getCanvasOffset } from "./simpleRender";
 
 export type Time = i32;
+
+const RESTART_GAME_AFTER = 1000 * 3;
 
 @unmanaged
 export class World {
   static gridSizeX: i32 = 0;
   static gridSizeY: i32 = 0;
-  static nextPipeTime: Time = 0;
 
   static cursorPositionX: i32 = 0;
   static cursorPositionY: i32 = 0;
@@ -22,18 +23,24 @@ export class World {
   static countdownEnd: i32;
   static readonly countdownTotal: i32 = 1000 * 15;
   static gameOver: boolean = false;
+  static gameResetTimeout: i32 = 0;
 
   static flowMultiplier: i32 = 1;
   static isWinning: bool = false;
 
   static OFFSET_PIPE_ARRAY: usize = HEAP_BASE;
   static OFFSET_QUEUE_ARRAY: usize;
-  static OFFSET_CANVAS: usize;
+  static OFFSET_RENDERER: usize;
 }
 
 export function setupWorld(sizeX: i32, sizeY: i32): void {
   World.gridSizeX = sizeX;
   World.gridSizeY = sizeY;
+
+  World.gameOver = false;
+  World.gameResetTimeout = 0;
+  World.flowMultiplier = 1;
+  World.isWinning = false;
 
   // Setup array offset
   World.OFFSET_QUEUE_ARRAY =
@@ -41,7 +48,7 @@ export function setupWorld(sizeX: i32, sizeY: i32): void {
   let endQueue = World.OFFSET_QUEUE_ARRAY + Queue.MAX * Queue.SIZE;
 
   // Javascript's Uint32Array requires the canvas offset to be a multiple of 4
-  World.OFFSET_CANVAS = endQueue + (4 - (endQueue % 4));
+  World.OFFSET_RENDERER = endQueue + (4 - (endQueue % 4));
 
   Queue.fill();
 
@@ -200,12 +207,13 @@ function flowConnected(index: i32, flowFrom: u8): bool {
   return false;
 }
 
-export function getOffsetCanvas(): i32 {
-  return World.OFFSET_CANVAS;
+export function getOffsetRenderer(): i32 {
+  return getCanvasOffset();
 }
 
-function showGameOver(): void {
+function showGameOver(time: i32): void {
   World.gameOver = true;
+  World.gameResetTimeout = time + RESTART_GAME_AFTER;
 }
 
 function outOfBounds(x: i32, y: i32): bool {
@@ -255,19 +263,27 @@ export function step(width: i32, height: i32, time: i32): void {
         let burstX = getBurstX(burst, x);
 
         if (outOfBounds(burstX, burstY)) {
-          showGameOver();
+          showGameOver(time);
         } else {
           let index = Pipe.getIndex(burstX, burstY, World.gridSizeX);
           let shape = Pipe.getShape(index);
           let inlet = getInletFromOutlet(burst);
           if (shape > 0 && (inlet & shape) > 0) {
             Pipe.startFlowFrom(index, inlet, time);
+
+            if (shape & Shape.PIPE_END) {
+              World.gameResetTimeout = time + RESTART_GAME_AFTER;
+            }
           } else {
-            showGameOver();
+            showGameOver(time);
           }
         }
       }
     }
+  }
+
+  if (World.gameResetTimeout > 0 && World.gameResetTimeout <= time) {
+    setupWorld(World.gridSizeX, World.gridSizeY);
   }
 
   render(width, height, time);

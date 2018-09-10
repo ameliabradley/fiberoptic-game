@@ -12,12 +12,12 @@ export function countSetBits(n: u8): u8 {
 }
 
 export function getRegularIndexFromSideIndex(sizeX: i32, sizeY: i32, sideIndex: i32): i32 {
-  let maxSide = 4 * sizeX - 4;
+  let maxSide = 2 * (sizeX + sizeY) - 4;
 
   let startIndex: i32 = 0;
   if (sideIndex < sizeX) {
     startIndex = sideIndex;
-  } else if (sideIndex < maxSide - sizeX * 2) {
+  } else if (sideIndex < maxSide - sizeX) {
     let x = sideIndex + 1 - sizeX;
     startIndex = (Math.floor(x / 2) as i32) * (sizeX - 2) + sideIndex;
   } else {
@@ -29,7 +29,7 @@ export function getRegularIndexFromSideIndex(sizeX: i32, sizeY: i32, sideIndex: 
 }
 
 export function getRandomSide(sizeX: i32, sizeY: i32): i32 {
-  let maxSide = 4 * sizeX - 4;
+  let maxSide = 2 * (sizeX + sizeY) - 4;
   let sideIndex = randomInt(0, maxSide - 1);
   return getRegularIndexFromSideIndex(sizeX, sizeY, sideIndex);
 }

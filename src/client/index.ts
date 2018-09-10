@@ -101,7 +101,7 @@ fetch("module.untouched.wasm")
     exports = results.instance.exports;
     exports.setupWorld(10, 8);
 
-    var offsetCanvas = exports.getOffsetCanvas();
+    var offsetCanvas = exports.getOffsetRenderer();
     var mem = new Uint32Array(memory.buffer, offsetCanvas);
 
     (function render() {

@@ -11,6 +11,11 @@ const PIPE_ENDPOINT = 14;
 
 const PIXEL_SIZE = sizeof<i32>();
 
+const BUFFER_WIDTH = PIXEL_SIZE * PIPE_SIZE * 10;
+const BUFFER_SIZE = BUFFER_WIDTH * PIPE_SIZE * 8;
+const FLAG_CURSOR = 1;
+const FLAG_INVALID = 1 << 1;
+
 function getPos(color: i32, pos: i32): f32 {
   let offset = 24 - pos * 8;
   return <f32>((color & (0xff << offset)) >>> offset);
@@ -32,8 +37,10 @@ function renderPixel(offset: i32, color: i32, alpha: boolean = false): void {
 
       let fg3 = getPos(color, 0);
 
+      if (fg3 === 0) return;
+
       let alpha: f32 = fg3 / 255;
-      let inv_alpha: f32 = (256 - fg3) / 255;
+      let inv_alpha: f32 = (255 - fg3) / 255;
 
       let b: u8 = getPosColor(<f32>color, alpha, inv_alpha, bg, 1);
       let g: u8 = getPosColor(<f32>color, alpha, inv_alpha, bg, 2);
@@ -67,20 +74,30 @@ const PIPE_CONTENTS_COLOR = 0xff00f7ff; // fff700
 const PIPE_BLOCKED_BORDER = 0xffa3b0b0;
 const PIPE_BLOCKED_BACKGROUND = 0xff787878;
 
-function renderPipe(offset: i32, width: i32, pipeShape: i32, isCursor: boolean = false): void {
+function renderPipe(offset: i32, width: i32, pipeShape: i32, flags: i32 = 0): void {
   let onlyShape: i8 = (pipeShape as u8) & 0b1111;
-  let insideColor: i32 = isCursor ? 0xaa574f3d : PIPE_INSIDE_COLOR;
-  let pipeColor: i32 = isCursor ? 0xaa805f2d : PIPE_COLOR;
+
+  let insideColor: i32 = PIPE_INSIDE_COLOR;
+  let pipeColor: i32 = PIPE_COLOR;
+  let blockedBg: i32 = PIPE_BLOCKED_BACKGROUND;
+  let blockedBorder: i32 = PIPE_BLOCKED_BORDER;
+
+  if (flags & FLAG_CURSOR) {
+    insideColor = flags & FLAG_INVALID ? 0xff3d3d57 : 0xff574f3d;
+    pipeColor = flags & FLAG_INVALID ? 0xff2d2d80 : 0xff805f2d;
+    blockedBg = insideColor;
+    blockedBorder = pipeColor;
+  }
 
   if (pipeShape & Shape.PIPE_BLOCKED) {
-    drawRectOffset(width, offset, PIPE_SIZE, PIPE_SIZE, PIPE_BLOCKED_BORDER);
+    drawRectOffset(width, offset, PIPE_SIZE, PIPE_SIZE, blockedBorder);
 
     drawRectOffset(
       width,
       offset + getPixelOffset(1, 1, width),
       PIPE_SIZE - 2,
       PIPE_SIZE - 2,
-      PIPE_BLOCKED_BACKGROUND
+      blockedBg
     );
   }
 
@@ -155,8 +172,53 @@ function drawRect(
   sizeY: i32,
   color: i32
 ): void {
-  let offset = World.OFFSET_CANVAS + getPixelOffset(offsetX, offsetY, width);
+  let offset = getCanvasOffset() + getPixelOffset(offsetX, offsetY, width);
   drawRectOffset(width, offset, sizeX, sizeY, color);
+}
+
+function clipRectAlpha(
+  bufferX: i32,
+  bufferY: i32,
+  width: i32,
+  height: i32,
+  canvasX: i32,
+  canvasY: i32,
+  sizeX: i32,
+  alpha: u8
+): void {
+  let baseBufferOffset = getBufferOffset() + getPixelOffset(bufferX, bufferY, BUFFER_WIDTH);
+  let baseCanvasOffset = getCanvasOffset() + getPixelOffset(canvasX, canvasY, sizeX);
+  for (let x = 0; x < width; x++) {
+    for (let y = 0; y < height; y++) {
+      let color = load<i32>(baseBufferOffset + getPixelOffset(x, y, BUFFER_WIDTH));
+      renderPixel(
+        baseCanvasOffset + getPixelOffset(x, y, sizeX),
+        color === 0x00000000 ? color : (color & 0x00ffffff) | (alpha << 24),
+        true
+      );
+    }
+  }
+}
+
+function clipRect(
+  bufferX: i32,
+  bufferY: i32,
+  width: i32,
+  height: i32,
+  canvasX: i32,
+  canvasY: i32,
+  sizeX: i32
+): void {
+  let baseBufferOffset = getBufferOffset() + getPixelOffset(bufferX, bufferY, BUFFER_WIDTH);
+  let baseCanvasOffset = getCanvasOffset() + getPixelOffset(canvasX, canvasY, sizeX);
+  for (let x = 0; x < width; x++) {
+    for (let y = 0; y < height; y++) {
+      let color = load<i32>(baseBufferOffset + getPixelOffset(x, y, BUFFER_WIDTH));
+      if (color !== 0x00000000) {
+        renderPixel(baseCanvasOffset + getPixelOffset(x, y, sizeX), color);
+      }
+    }
+  }
 }
 
 function drawRectOffset(width: i32, offset: i32, sizeX: i32, sizeY: i32, color: i32): void {
@@ -181,7 +243,7 @@ export function render(width: i32, height: i32, time: i32): void {
       let pipeShape = Pipe.getShape(index);
 
       renderPipe(
-        World.OFFSET_CANVAS +
+        getCanvasOffset() +
           getPixelOffset(x * PIPE_SIZE + OFFSET_GRID_X, y * PIPE_SIZE + OFFSET_GRID_Y, width),
         width,
         pipeShape
@@ -276,6 +338,14 @@ export function render(width: i32, height: i32, time: i32): void {
   drawQueue(width);
   drawCursor(width, height, time);
   drawProgressBar(width, height, time);
+
+  if (World.gameOver) {
+    drawGameOver(width, height);
+  }
+
+  if (World.isWinning) {
+    drawWin(width, height);
+  }
 }
 
 function drawCursor(width: i32, height: i32, time: i32): void {
@@ -284,23 +354,43 @@ function drawCursor(width: i32, height: i32, time: i32): void {
   let startX = World.cursorPositionX * PIPE_SIZE;
   let startY = World.cursorPositionY * PIPE_SIZE;
 
-  if (validPlacement) {
-    let shape = Queue.getShape(0);
-    renderPipe(
-      World.OFFSET_CANVAS +
-        getPixelOffset(startX + OFFSET_GRID_X - 2, startY + OFFSET_GRID_Y - 2, width),
-      width,
-      shape,
-      true
-    );
-  }
+  let shape = Queue.getShape(0);
+  drawRectOffset(BUFFER_WIDTH, getBufferOffset(), PIPE_SIZE, PIPE_SIZE, BACKGROUND_COLOR);
+  renderPipe(
+    getBufferOffset(),
+    //getCanvasOffset() +
+    //  getPixelOffset(startX + OFFSET_GRID_X - 2, startY + OFFSET_GRID_Y - 2, width),
+    BUFFER_WIDTH,
+    shape,
+    FLAG_CURSOR | (validPlacement ? 0 : FLAG_INVALID)
+  );
+  clipRectAlpha(
+    0,
+    0,
+    PIPE_SIZE,
+    PIPE_SIZE,
+    startX + OFFSET_GRID_X - 2,
+    startY + OFFSET_GRID_Y - 2,
+    width,
+    200
+  );
+  /*
+  renderPipe(
+    getCanvasOffset() +
+      getPixelOffset(startX + OFFSET_GRID_X - 2, startY + OFFSET_GRID_Y - 2, width),
+    width,
+    shape
+  );
+  */
 
+  /*
   let color = validPlacement ? 0xffff00ff : 0xff0000ff;
   let end = PIPE_SIZE - 1;
   drawRect(width, startX + OFFSET_GRID_X, startY + OFFSET_GRID_Y, 1, 1, color);
   drawRect(width, startX + OFFSET_GRID_X + end, startY + OFFSET_GRID_Y, 1, 1, color);
   drawRect(width, startX + OFFSET_GRID_X, startY + end + OFFSET_GRID_Y, 1, 1, color);
   drawRect(width, startX + OFFSET_GRID_X + end, startY + end + OFFSET_GRID_Y, 1, 1, color);
+  */
 }
 
 const BORDER_COLOR = 0xff26323a;
@@ -310,7 +400,7 @@ function drawQueue(width: i32): void {
   for (let i: u8 = 0; i < Queue.MAX; i++) {
     let shape = Queue.getShape(i);
     renderPipe(
-      World.OFFSET_CANVAS + getPixelOffset(1, (Queue.MAX - i - 1) * PIPE_SIZE + 4, width),
+      getCanvasOffset() + getPixelOffset(1, (Queue.MAX - i - 1) * PIPE_SIZE + 4, width),
       width,
       shape
     );
@@ -353,7 +443,7 @@ export function drawChar(char: i32, width: i32, offsetX: i32, offsetY: i32, colo
   let shift: i16 = 0;
 
   // 3x5
-  let baseOffset = World.OFFSET_CANVAS + getPixelOffset(offsetX, offsetY, width);
+  let baseOffset = getCanvasOffset() + getPixelOffset(offsetX, offsetY, width);
   for (let y = 0; y < 5; y++) {
     for (let x = 0; x < 3; x++) {
       let on = letter & (1 << shift);
@@ -363,5 +453,41 @@ export function drawChar(char: i32, width: i32, offsetX: i32, offsetY: i32, colo
       }
       shift++;
     }
+  }
+}
+
+function getBufferOffset(): i32 {
+  return World.OFFSET_RENDERER;
+}
+
+export function getCanvasOffset(): i32 {
+  return World.OFFSET_RENDERER + BUFFER_SIZE;
+}
+
+function drawGameOver(width: i32, height: i32): void {
+  let textHeight = 9;
+  let queueLabel: Array<i32> = [71, 65, 77, 69, 32, 79, 86, 69, 82];
+  let textWidth = queueLabel.length * 4 + 4;
+  let startX = (width - textWidth) / 2;
+  let startY = (height - textHeight) / 2;
+  drawRect(width, startX, startY, textWidth, textHeight, PIPE_INSIDE_COLOR);
+  drawRect(width, startX + 1, startY + 1, textWidth - 2, textHeight - 2, BACKGROUND_COLOR);
+  // drawRect(width, (width - textWidth + 1) / 2, (height - charHeight - 4) / 2, BACKGROUND_COLOR);
+  for (let i = 0; i < queueLabel.length; i++) {
+    drawChar(queueLabel[i], width, startX + 2 + i * 4, startY + 2, BORDER_COLOR);
+  }
+}
+
+function drawWin(width: i32, height: i32): void {
+  let textHeight = 9;
+  let queueLabel: Array<i32> = [89, 79, 85, 32, 87, 73, 78];
+  let textWidth = queueLabel.length * 4 + 4;
+  let startX = (width - textWidth) / 2;
+  let startY = (height - textHeight) / 2;
+  drawRect(width, startX, startY, textWidth, textHeight, PIPE_INSIDE_COLOR);
+  drawRect(width, startX + 1, startY + 1, textWidth - 2, textHeight - 2, BACKGROUND_COLOR);
+  // drawRect(width, (width - textWidth + 1) / 2, (height - charHeight - 4) / 2, BACKGROUND_COLOR);
+  for (let i = 0; i < queueLabel.length; i++) {
+    drawChar(queueLabel[i], width, startX + 2 + i * 4, startY + 2, BORDER_COLOR);
   }
 }

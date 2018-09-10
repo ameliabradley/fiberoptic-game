@@ -1,7 +1,7 @@
 import * as Shape from "../assembly/shape";
 import { instantiate } from "../test-util/instantiate";
 
-const HEAP = 80; // TODO: Get automatically
+const HEAP = 192; // TODO: Get automatically
 let wasm;
 
 beforeAll(async done => {

@@ -22,7 +22,12 @@ export function getShape(index: usize): u8 {
   return load<u8>(getStartOffset(index) + SHAPE_OFFSET);
 }
 export function saveShape(index: usize, shape: u8): void {
-  store<u8>(getStartOffset(index) + SHAPE_OFFSET, shape);
+  let offset = getStartOffset(index);
+  store<u8>(offset + SHAPE_OFFSET, shape);
+  store<u8>(offset + FLOW1_TYPE_OFFSET, 0);
+  store<u8>(offset + FLOW2_TYPE_OFFSET, 0);
+  store<u8>(offset + FLOW1_START_TIME_OFFSET, 0);
+  store<u8>(offset + FLOW2_START_TIME_OFFSET, 0);
 }
 
 export function getIndex(x: i32, y: i32, gridSizeX: i32): i32 {

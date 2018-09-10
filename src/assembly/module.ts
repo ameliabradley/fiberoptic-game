@@ -2,4 +2,4 @@
 // import "allocator/arena";
 // export { render as simpleRender } from "./simpleRender";
 
-export { step, setupWorld, setKeys, getOffsetCanvas } from "./game";
+export { step, setupWorld, setKeys, getOffsetRenderer } from "./game";
