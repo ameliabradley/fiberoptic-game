@@ -1,5 +1,4 @@
 node_modules
-dist/bundle.js
 dist/module.untouched.wasm
 dist/module.untouched.wasm.map
 dist/unit.untouched.wasm
