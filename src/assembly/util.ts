@@ -17,7 +17,7 @@ export function getRegularIndexFromSideIndex(sizeX: i32, sizeY: i32, sideIndex: 
   let startIndex: i32 = 0;
   if (sideIndex < sizeX) {
     startIndex = sideIndex;
-  } else if (sideIndex < maxSide - sizeX) {
+  } else if (sideIndex < maxSide - sizeX * 2) {
     let x = sideIndex + 1 - sizeX;
     startIndex = (Math.floor(x / 2) as i32) * (sizeX - 2) + sideIndex;
   } else {
