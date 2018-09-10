@@ -1,7 +1,7 @@
 import { readFileSync } from "fs";
 
 let memory;
-const byteSize = 100;
+const byteSize = 300;
 const memorysize = ((byteSize + 0xffff) & ~0xffff) >>> 16;
 
 export const instantiate = async () => {

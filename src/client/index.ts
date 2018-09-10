@@ -34,7 +34,7 @@ updateSize();
 window.onresize = updateSize;
 
 // TODO: Update this on release to the number of bytes we expect the internal memory to take up
-var memByteSize = 500;
+var memByteSize = 800;
 
 var totalPages = (memByteSize + ((canvasByteSize + 0xffff) & ~0xffff)) >>> 16;
 console.log(`Memory Allocated: ${totalPages * 6.4} KiB`);
