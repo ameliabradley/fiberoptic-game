@@ -1,5 +1,5 @@
 import * as Shape from "./shape";
-import { logi } from "./imports";
+import { logi } from "../imports";
 
 export const BURST_TIME: i32 = 1000 * 5;
 

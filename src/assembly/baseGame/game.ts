@@ -1,14 +1,14 @@
-import { randomInt, getRandomSetBit, getRandomSide } from "./util";
 import * as Pipe from "./pipe";
 import * as Shape from "./shape";
 import * as Queue from "./queue";
-import * as Keys from "../shared/keyboard";
-import { getTime, logi } from "./imports";
-import { render, getCanvasOffset } from "./simpleRender";
+import * as Keys from "../../shared/keyboard";
+import { getTime, logi } from "../imports";
+import { generateRandomMap } from "../map/randomGenerator";
 
 export type Time = i32;
 
 const RESTART_GAME_AFTER = 1000 * 3;
+const FLOW_STARTS_AFTER = 1000 * 15;
 
 @unmanaged
 export class World {
@@ -18,10 +18,10 @@ export class World {
   static cursorPositionX: i32 = 0;
   static cursorPositionY: i32 = 0;
 
-  static lastUpdatedTime: i32 = 0;
+  static levelStartTime: i32 = 0;
 
   static countdownEnd: i32;
-  static readonly countdownTotal: i32 = 1000 * 15;
+  static readonly countdownTotal: i32 = FLOW_STARTS_AFTER;
   static gameOver: boolean = false;
   static gameResetTimeout: i32 = 0;
 
@@ -50,90 +50,12 @@ export function setupWorld(sizeX: i32, sizeY: i32): void {
   // Javascript's Uint32Array requires the canvas offset to be a multiple of 4
   World.OFFSET_RENDERER = endQueue + (4 - (endQueue % 4));
 
+  let time = getTime();
+  World.countdownEnd = time + FLOW_STARTS_AFTER;
+
+  generateRandomMap(sizeX, sizeY);
+
   Queue.fill();
-
-  for (let i = 0; i < sizeX * sizeY; i++) {
-    Pipe.saveShape(i, Shape.PIPE_OUTLET_NONE);
-  }
-
-  let maxX = sizeX - 1;
-  let maxY = sizeY - 1;
-
-  World.countdownEnd = getTime() + World.countdownTotal;
-
-  let sideIndex = getRandomSide(sizeX, sizeY);
-  let startX = sideIndex % sizeX;
-  let startY = (sideIndex - startX) / sizeX;
-  let startOptions = getValidOutlets(startX, startY, maxX, maxY);
-  let startDirection = getRandomSetBit(startOptions);
-  Pipe.saveShape(sideIndex, startDirection | Shape.PIPE_START);
-  Pipe.startFlowFrom(
-    Pipe.getIndex(startX, startY, sizeX),
-    Shape.PIPE_OUTLET_LEFT,
-    World.countdownEnd
-  );
-
-  let endX = maxX - startX;
-  let endY = maxY - startY;
-  let endOptions = getValidOutlets(endX, endY, maxX, maxY);
-  let endDirection = getRandomSetBit(endOptions);
-  Pipe.saveShape(endX + endY * sizeX, endDirection | Shape.PIPE_END);
-
-  /*
-  Pipe.saveShape(Pipe.getIndex(2, 1, sizeX), Shape.PIPE_OUTLET_TOP);
-  Pipe.saveShape(Pipe.getIndex(2, 2, sizeX), Shape.PIPE_OUTLET_BOTTOM);
-  Pipe.saveShape(Pipe.getIndex(2, 3, sizeX), Shape.PIPE_OUTLET_LEFT);
-  Pipe.saveShape(Pipe.getIndex(2, 4, sizeX), Shape.PIPE_OUTLET_RIGHT);
-  Pipe.saveShape(Pipe.getIndex(2, 5, sizeX), Shape.PIPE_OUTLET_TOP | Shape.PIPE_OUTLET_BOTTOM);
-  Pipe.saveShape(Pipe.getIndex(2, 6, sizeX), Shape.PIPE_OUTLET_CROSS);
-  */
-
-  /*
-  Pipe.saveShape(Pipe.getIndex(2, 2, sizeX), Shape.PIPE_OUTLET_RIGHT | Shape.PIPE_END);
-  Pipe.saveShape(Pipe.getIndex(3, 2, sizeX), Shape.PIPE_OUTLET_LEFT | Shape.PIPE_OUTLET_BOTTOM);
-  Pipe.saveShape(
-    Pipe.getIndex(3, 3, sizeX),
-    Shape.PIPE_OUTLET_LEFT | Shape.PIPE_OUTLET_TOP | Shape.PIPE_BLOCKED
-  );
-  Pipe.startFlowFrom(Pipe.getIndex(2, 2, sizeX), Shape.PIPE_OUTLET_LEFT, World.countdownEnd);
-  */
-
-  /*
-  Pipe.saveShape(Pipe.getIndex(2, 2, sizeX), Shape.PIPE_OUTLET_RIGHT | Shape.PIPE_END);
-  // Pipe.saveShape(Pipe.getIndex(3, 2, sizeX), Shape.PIPE_OUTLET_CROSS | Shape.PIPE_BLOCKED);
-  Pipe.saveShape(Pipe.getIndex(4, 2, sizeX), Shape.PIPE_START | Shape.PIPE_OUTLET_LEFT);
-  Pipe.startFlowFrom(Pipe.getIndex(4, 2, sizeX), Shape.PIPE_OUTLET_RIGHT, World.countdownEnd);
-  */
-
-  // Testing
-  /*
-  Pipe.saveShape(sizeX + 0, Shape.PIPE_OUTLET_LEFT | Shape.PIPE_OUTLET_RIGHT);
-  Pipe.startFlowFrom(sizeX + 0, Shape.PIPE_OUTLET_LEFT, World.countdownEnd);
-  Pipe.saveShape(sizeX + 1, Shape.PIPE_OUTLET_CROSS);
-  Pipe.saveShape(sizeX + 2, Shape.PIPE_OUTLET_LEFT | Shape.PIPE_OUTLET_BOTTOM);
-  Pipe.saveShape(sizeX + sizeX + 2, Shape.PIPE_OUTLET_LEFT | Shape.PIPE_OUTLET_TOP);
-  Pipe.saveShape(sizeX + sizeX + 1, Shape.PIPE_OUTLET_RIGHT | Shape.PIPE_OUTLET_TOP);
-  Pipe.saveShape(1, Shape.PIPE_OUTLET_RIGHT | Shape.PIPE_OUTLET_BOTTOM);
-  */
-}
-
-export function updateTime(time: i32): void {
-  World.lastUpdatedTime = time;
-}
-
-export function getValidOutlets(startX: i32, startY: i32, maxX: i32, maxY: i32): u8 {
-  let options: u8 = 0b1111; // TBLR
-  options &= startX === 0 ? 0b1101 : startX === maxX ? 0b1110 : 0b1111;
-  options &= startY === 0 ? 0b0111 : startY === maxY ? 0b1011 : 0b1111;
-  return options;
-}
-
-export function getSizeX(): i32 {
-  return World.gridSizeX;
-}
-
-export function getSizeY(): i32 {
-  return World.gridSizeY;
 }
 
 export function getHeapBase(): usize {
@@ -207,10 +129,6 @@ function flowConnected(index: i32, flowFrom: u8): bool {
   return false;
 }
 
-export function getOffsetRenderer(): i32 {
-  return getCanvasOffset();
-}
-
 function showGameOver(time: i32): void {
   World.gameOver = true;
   World.gameResetTimeout = time + RESTART_GAME_AFTER;
@@ -238,22 +156,7 @@ function getInletFromOutlet(outlet: u8): u8 {
   }
 }
 
-export function step(width: i32, height: i32, time: i32): void {
-  /*
-  if (time > World.countdownEnd) {
-    for (let x = 0; x < World.gridSizeX; x++) {
-      for (let y = 0; y < World.gridSizeY; y++) {
-        let index = Pipe.getIndex(x, y, World.gridSizeX);
-        let shape = Pipe.getShape(index);
-        let inlet = getInletFromOutlet(burst);
-        if (shape & Shape.PIPE_START) {
-          Pipe.startFlowFrom(index, Shape.PIPE_OUTLET_LEFT, );
-        }
-      }
-    }
-  }
-  */
-
+export function step(time: i32): void {
   for (let x = 0; x < World.gridSizeX; x++) {
     for (let y = 0; y < World.gridSizeY; y++) {
       let index = Pipe.getIndex(x, y, World.gridSizeX);
@@ -285,8 +188,6 @@ export function step(width: i32, height: i32, time: i32): void {
   if (World.gameResetTimeout > 0 && World.gameResetTimeout <= time) {
     setupWorld(World.gridSizeX, World.gridSizeY);
   }
-
-  render(width, height, time);
 }
 
 function getBurstX(burst: u8, x: i32): i32 {

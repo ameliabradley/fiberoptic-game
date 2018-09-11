@@ -1,4 +1,5 @@
 // Functions exported for unit tests
-export { render as simpleRender } from "./simpleRender";
-export { setupWorld, getSizeX, getSizeY, getHeapBase, getValidOutlets } from "./game";
+export { render as simpleRender } from "./ui/simpleRender";
+export { setupWorld, getHeapBase } from "./baseGame/game";
 export { randomInt, getRandomSetBit, countSetBits, getRegularIndexFromSideIndex } from "./util";
+export { getValidOutlets } from "./map/randomGenerator";

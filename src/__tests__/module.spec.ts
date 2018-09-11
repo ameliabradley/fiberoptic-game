@@ -1,17 +1,12 @@
-import * as Shape from "../assembly/shape";
+import * as Shape from "../assembly/baseGame/shape";
 import { instantiate } from "../test-util/instantiate";
 
-const HEAP = 192; // TODO: Get automatically
+const HEAP = 144; // TODO: Get automatically
 let wasm;
 
 beforeAll(async done => {
   wasm = await instantiate();
   done();
-});
-
-test("setupWorld correctly loads world", () => {
-  expect(wasm.getSizeX()).toBe(5);
-  expect(wasm.getSizeY()).toBe(5);
 });
 
 test("random", () => {

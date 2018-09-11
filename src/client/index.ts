@@ -43,8 +43,6 @@ var memory = new WebAssembly.Memory({
   initial: totalPages
 });
 
-let char = 0;
-
 function charFromKey(key: string) {
   switch (key) {
     case "w":
@@ -74,13 +72,16 @@ function charFromKey(key: string) {
 let exports: any;
 
 window.addEventListener("keydown", e => {
-  char = char | charFromKey(e.key);
-  exports.setKeys(char);
+  exports.setKeys(charFromKey(e.key));
 });
+
+/*
 window.addEventListener("keyup", e => {
+  exports.setKeys(charFromKey(e.key));
   char = char & ~charFromKey(e.key);
   exports.setKeys(char);
 });
+*/
 
 fetch(window.location.hostname === "127.0.0.1" ? "module.untouched.wasm" : "module.optimized.wasm")
   .then(response => response.arrayBuffer())
@@ -101,7 +102,7 @@ fetch(window.location.hostname === "127.0.0.1" ? "module.untouched.wasm" : "modu
     exports = results.instance.exports;
     exports.setupWorld(10, 8);
 
-    var offsetCanvas = exports.getOffsetRenderer();
+    var offsetCanvas = exports.getCanvasOffset();
     var mem = new Uint32Array(memory.buffer, offsetCanvas);
 
     (function render() {

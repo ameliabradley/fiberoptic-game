@@ -1,6 +1,6 @@
 import { World } from "./game";
 import * as Shape from "./shape";
-import { randomInt } from "./util";
+import { randomInt } from "../util";
 
 export const MAX: u8 = 5;
 const SHAPE_OFFSET = 0;
