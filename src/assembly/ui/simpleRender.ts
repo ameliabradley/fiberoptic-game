@@ -389,11 +389,7 @@ function drawQueue(width: i32, time: i32): void {
   drawRect(width, 0, 3, PIPE_SIZE + 2, PIPE_SIZE * Queue.MAX + 2, WINDOW_BORDER_COLOR);
   drawRect(width, 1, 4, PIPE_SIZE, PIPE_SIZE * Queue.MAX, BACKGROUND_COLOR);
 
-  let queueSignature: i32 = 0;
-  for (let i: u8 = 0; i < Queue.MAX; i++) {
-    let shape = Queue.getShape(i);
-    queueSignature += shape;
-  }
+  let queueSignature: i32 = Queue.getQueueId();
 
   if (queueSignature !== lastQueueSignature) {
     lastQueueSignature = queueSignature;

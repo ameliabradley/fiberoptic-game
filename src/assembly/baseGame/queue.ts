@@ -8,6 +8,8 @@ export const SIZE: usize = MAX * sizeof<u8>();
 
 const getStartOffset = (index: usize): usize => World.OFFSET_QUEUE_ARRAY + index * SIZE;
 
+let id: u8 = 0;
+
 export function fill(): void {
   for (let i: u8 = 0; i < MAX; i++) {
     fillWithRandomShape(i);
@@ -41,6 +43,7 @@ function fillWithRandomShape(index: i32): void {
 
 export function storeShape(index: i32, shape: u8): void {
   store<u8>(getStartOffset(index) + SHAPE_OFFSET, shape);
+  id++;
 }
 
 export function getShape(index: i32): u8 {
@@ -55,4 +58,8 @@ export function pop(): u8 {
   }
   fillWithRandomShape(MAX - 1);
   return shape;
+}
+
+export function getQueueId(): i32 {
+  return id;
 }
