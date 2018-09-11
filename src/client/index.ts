@@ -69,17 +69,17 @@ function charFromKey(key: string) {
   return 0;
 }
 
-let exports: any;
+let wasmExports: any;
 
 window.addEventListener("keydown", e => {
-  exports.setKeys(charFromKey(e.key));
+  wasmExports.setKeys(charFromKey(e.key));
 });
 
 /*
 window.addEventListener("keyup", e => {
-  exports.setKeys(charFromKey(e.key));
+  wasmExports.setKeys(charFromKey(e.key));
   char = char & ~charFromKey(e.key);
-  exports.setKeys(char);
+  wasmExports.setKeys(char);
 });
 */
 
@@ -99,15 +99,15 @@ fetch(window.location.hostname === "127.0.0.1" ? "module.untouched.wasm" : "modu
     })
   )
   .then(results => {
-    exports = results.instance.exports;
-    exports.setupWorld(10, 8);
+    wasmExports = results.instance.exports;
+    wasmExports.setupWorld(10, 8);
 
-    var offsetCanvas = exports.getCanvasOffset();
+    var offsetCanvas = wasmExports.getCanvasOffset();
     var mem = new Uint32Array(memory.buffer, offsetCanvas);
 
     (function render() {
       requestAnimationFrame(render);
-      exports.step(width, height, Math.floor(performance.now()));
+      wasmExports.step(width, height, Math.floor(performance.now()));
       argb.set(mem.subarray(0, size)); // copy output to image buffer
       ctx.putImageData(imageData, 0, 0); // apply image buffer
     })();
