@@ -1,6 +1,4 @@
 node_modules
-dist/bundle.js
-dist/module.optimized.wasm
 dist/module.optimized.wasm.map
 dist/module.untouched.wasm
 dist/module.untouched.wasm.map
