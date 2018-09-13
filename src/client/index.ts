@@ -3,9 +3,12 @@ import * as Keyboard from "../shared/keyboard";
 "use strict";
 
 // Set up the canvas with a 2D rendering context
-var cnv = document.getElementsByTagName("canvas")[0];
+let canvases = document.getElementsByTagName("canvas");
+var cnv = canvases[0];
+var bg = canvases[1];
 
 var ctx = cnv.getContext("2d");
+var ctxbg = bg.getContext("2d");
 let width: number;
 let height: number;
 let canvasByteSize: number;
@@ -17,8 +20,8 @@ function updateSize() {
   width = 240;
   height = 200;
 
-  cnv.width = width;
-  cnv.height = height;
+  bg.width = cnv.width = width;
+  bg.height = cnv.height = height;
 
   ctx.imageSmoothingEnabled = false;
 
@@ -69,21 +72,42 @@ function charFromKey(key: string) {
   return 0;
 }
 
-let exports: any;
+let wasmExports: any;
 
 window.addEventListener("keydown", e => {
-  exports.setKeys(charFromKey(e.key));
+  if (wasmExports) {
+    let key = charFromKey(e.key);
+    wasmExports.setKeys(key);
+    /*
+    if (key & Keyboard.FLAG_SPACE) {
+      let osc = playTone(195.997717990874647, "sine");
+      setTimeout(() => osc.stop(), 1000);
+    } else {
+      let osc = playTone(130.812782650299317, "sine");
+      setTimeout(() => osc.stop(), 1000);
+    }
+    */
+  }
 });
 
 /*
-window.addEventListener("keyup", e => {
-  exports.setKeys(charFromKey(e.key));
-  char = char & ~charFromKey(e.key);
-  exports.setKeys(char);
-});
+let audioContext = new ((window as any).AudioContext || (window as any).webkitAudioContext)();
+let masterGainNode = audioContext.createGain();
+masterGainNode.connect(audioContext.destination);
+masterGainNode.gain.value = 0.5; // volumeControl.value;
+function playTone(freq: number, wave: string) {
+  let osc = audioContext.createOscillator();
+  osc.connect(masterGainNode);
+  osc.type = wave;
+  osc.frequency.value = freq;
+  osc.start();
+
+  return osc;
+}
 */
 
-fetch(window.location.hostname === "127.0.0.1" ? "module.untouched.wasm" : "module.optimized.wasm")
+// fetch(window.location.hostname === "127.0.0.1" ? "module.untouched.wasm" : "module.optimized.wasm")
+fetch("module.optimized.wasm")
   .then(response => response.arrayBuffer())
   .then(bytes =>
     WebAssembly.instantiate(bytes, {
@@ -94,21 +118,24 @@ fetch(window.location.hostname === "127.0.0.1" ? "module.untouched.wasm" : "modu
         logf: (value: number) => console.log("logf: ", value)
       },
       tools: {
-        time: () => Math.floor(performance.now())
+        time: () => Math.floor(performance.now()),
+        seti: (key: number, value: number) => localStorage.setItem(key as any, value as any),
+        geti: (key: number) => parseInt(localStorage.getItem(key as any))
       }
     })
   )
   .then(results => {
-    exports = results.instance.exports;
-    exports.setupWorld(10, 8);
+    wasmExports = results.instance.exports;
+    wasmExports.setupWorld(10, 8);
 
-    var offsetCanvas = exports.getCanvasOffset();
+    var offsetCanvas = wasmExports.getCanvasOffset();
     var mem = new Uint32Array(memory.buffer, offsetCanvas);
 
     (function render() {
       requestAnimationFrame(render);
-      exports.step(width, height, Math.floor(performance.now()));
+      wasmExports.step(width, height, Math.floor(performance.now()));
       argb.set(mem.subarray(0, size)); // copy output to image buffer
       ctx.putImageData(imageData, 0, 0); // apply image buffer
+      ctxbg.putImageData(imageData, 0, 0); // apply image buffer
     })();
   });

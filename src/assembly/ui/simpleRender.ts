@@ -1,10 +1,10 @@
-import { World } from "../baseGame/game";
+import { World, getHighScore } from "../baseGame/game";
 import * as Shape from "../baseGame/shape";
 import * as Pipe from "../baseGame/pipe";
 import * as Queue from "../baseGame/queue";
 import { getTime, logi, logf } from "../imports";
 import { getLetterFromChar } from "./tinyFont";
-import { renderPixel, getPixelOffset } from "./renderUtil";
+import { renderPixel, getPixelOffset, PIXEL_SIZE } from "./renderUtil";
 import { easeBounceOut } from "./easing";
 
 const PIPE_SIZE = 20;
@@ -39,6 +39,12 @@ const FONT_HEIGHT = 5;
 const WINDOW_BORDER_COLOR = 0xff26323a;
 
 const FRIENDLY_MESSAGE_TIMEOUT = 1000 * 5;
+
+@unmanaged
+class RenderState {
+  static lastQueueSignature: i32 = 0;
+  static lastQueueSignatureCaptureTime: i32 = 0;
+}
 
 function renderPipe(offset: i32, width: i32, pipeShape: i32, flags: i32 = 0): void {
   let onlyShape: i8 = (pipeShape as u8) & 0b1111;
@@ -221,6 +227,38 @@ export function render(width: i32, height: i32, time: i32): void {
 
   drawRect(width, 0, 0, width, height, BACKGROUND_COLOR);
 
+  if (World.showingStartScreen) {
+    let startX = 35;
+    let startY = 50;
+
+    let logoText: Array<u8> = [70, 73, 66, 69, 82, 32, 79, 80, 84, 73, 67]; // FIBER OPTIC
+    drawText(width, startX + 2, startY + 2, logoText, 0xff222222, 4);
+    drawText(width, startX, startY, logoText, PIPE_CONTENTS_COLOR, 4);
+
+    let highScore = getHighScore();
+    let digits = countDigit(highScore) - 1;
+    let highScoreText: Array<u8> = [72, 73, 71, 72, 32, 83, 67, 79, 82, 69]; // HIGH SCORE
+    drawText(width, startX, startY + 30, highScoreText, PIPE_INSIDE_COLOR);
+    drawNumber(width, width - digits * 4 - 35, startY + 30, highScore, PIPE_INSIDE_COLOR);
+
+    if (time % 2000 < 1000) {
+      drawPressSpace(width, height);
+    }
+
+    // SPACE TO PLACE CABLE
+    // prettier-ignore
+    let instructionsText: Array<u8> = [ 83, 80, 65, 67, 69, 32, 84, 79, 32, 80, 76, 65, 67, 69, 32, 67, 65, 66, 76, 69 ];
+    let instructionsTextX = (width - instructionsText.length * 4) / 2;
+    drawText(width, instructionsTextX, height - 50, instructionsText, PIPE_INSIDE_COLOR);
+
+    // ARROW KEYS TO MOVE
+    // prettier-ignore
+    let instructionsText2: Array<u8> = [ 65, 82, 82, 79, 87, 32, 75, 69, 89, 83, 32, 84, 79, 32, 77, 79, 86, 69 ];
+    let instructionsText2X = (width - instructionsText2.length * 4) / 2;
+    drawText(width, instructionsText2X, height - 40, instructionsText2, PIPE_INSIDE_COLOR);
+    return;
+  }
+
   for (let x = 0; x < sizeX; x++) {
     for (let y = 0; y < sizeY; y++) {
       let index = Pipe.getIndex(x, y, World.gridSizeX);
@@ -347,6 +385,7 @@ export function render(width: i32, height: i32, time: i32): void {
   drawQueue(width, time);
   drawCursor(width, height, time);
   drawProgressBar(width, height, time);
+  drawScore(width, height, time);
 
   if (World.gameOver) {
     drawGameOver(width, height);
@@ -383,26 +422,25 @@ function drawCursor(width: i32, height: i32, time: i32): void {
   );
 }
 
-let lastQueueSignature: i32 = 0;
-let lastQueueSignatureCaptureTime: i32 = 0;
 function drawQueue(width: i32, time: i32): void {
   drawRect(width, 0, 3, PIPE_SIZE + 2, PIPE_SIZE * Queue.MAX + 2, WINDOW_BORDER_COLOR);
   drawRect(width, 1, 4, PIPE_SIZE, PIPE_SIZE * Queue.MAX, BACKGROUND_COLOR);
 
   let queueSignature: i32 = Queue.getQueueId();
 
-  if (queueSignature !== lastQueueSignature) {
-    lastQueueSignature = queueSignature;
-    lastQueueSignatureCaptureTime = time;
+  if (queueSignature !== RenderState.lastQueueSignature) {
+    RenderState.lastQueueSignature = queueSignature;
+    RenderState.lastQueueSignatureCaptureTime = time;
   }
 
   let offset: i32 = 0;
   let timeout = 1000 * 1;
-  let maxTime = lastQueueSignatureCaptureTime + timeout;
+  let maxTime = RenderState.lastQueueSignatureCaptureTime + timeout;
   if (time < maxTime) {
     offset =
       <i32>(
-        (<f32>PIPE_SIZE * easeBounceOut(<f32>(time - lastQueueSignatureCaptureTime) / <f32>timeout))
+        (<f32>PIPE_SIZE *
+          easeBounceOut(<f32>(time - RenderState.lastQueueSignatureCaptureTime) / <f32>timeout))
       ) - PIPE_SIZE;
   }
 
@@ -424,9 +462,14 @@ function drawQueue(width: i32, time: i32): void {
 }
 
 function drawProgressBar(width: i32, height: i32, time: i32): void {
-  let fullProgressWidth: i32 = width;
-  let y = height - PROGRESSBAR_HEIGHT;
-  let x = 0;
+  let outsideY = height - PROGRESSBAR_HEIGHT - 5;
+  let outsideX = 0;
+
+  drawRect(width, outsideX, outsideY, width, PROGRESSBAR_HEIGHT + 2, WINDOW_BORDER_COLOR);
+
+  let fullProgressWidth: i32 = width - 2;
+  let x = outsideX + 1;
+  let y = outsideY + 1;
 
   if (World.countdownEnd > time) {
     let percentage: f32 =
@@ -446,18 +489,45 @@ function drawProgressBar(width: i32, height: i32, time: i32): void {
   }
 }
 
-export function drawChar(char: i32, width: i32, offsetX: i32, offsetY: i32, color: i32): void {
+function drawScore(width: i32, height: i32, time: i32): void {
+  // drawRect(width, 0, 3, PIPE_SIZE + 2, PIPE_SIZE * Queue.MAX + 2, WINDOW_BORDER_COLOR);
+  // drawRect(width, 1, 4, PIPE_SIZE, PIPE_SIZE * Queue.MAX, BACKGROUND_COLOR);
+
+  let queueLabel: Array<u8> = [83, 67, 79, 82, 69]; // SCORE
+  let startX = 2;
+  let startY = PIPE_SIZE * Queue.MAX + 18;
+  drawText(width, startX, startY, queueLabel, WINDOW_BORDER_COLOR);
+
+  let digits = countDigit(World.score) - 1;
+  let locX = (PIPE_SIZE - digits * 4) / 2;
+  drawNumber(width, locX, startY + 6, World.score, PIPE_INSIDE_COLOR);
+}
+
+function drawChar(
+  char: i32,
+  width: i32,
+  offsetX: i32,
+  offsetY: i32,
+  color: i32,
+  scale: i32 = 1
+): void {
+  // 3x5
+  let baseOffset = getCanvasOffset() + getPixelOffset(offsetX, offsetY, width);
+  drawCharOffset(char, width, baseOffset, color, scale);
+}
+
+function drawCharOffset(char: i32, width: i32, baseOffset: i32, color: i32, scale: i32 = 1): void {
   let letter = getLetterFromChar(char);
   let shift: i16 = 0;
 
   // 3x5
-  let baseOffset = getCanvasOffset() + getPixelOffset(offsetX, offsetY, width);
   for (let y = 0; y < 5; y++) {
     for (let x = 0; x < 3; x++) {
       let on = letter & (1 << shift);
       if (on) {
-        let offset = baseOffset + getPixelOffset(x, y, width);
-        renderPixel(offset, color);
+        let offset = baseOffset + getPixelOffset(x * scale, y * scale, width);
+        // renderPixel(offset, color);
+        drawRectOffset(width, offset, scale, scale, color);
       }
       shift++;
     }
@@ -472,9 +542,144 @@ export function getCanvasOffset(): i32 {
   return World.OFFSET_RENDERER + BUFFER_SIZE;
 }
 
+function drawPressSpace(width: i32, height: i32): void {
+  let label: Array<u8> = [
+    80,
+    82,
+    69,
+    83,
+    83,
+    32,
+    83,
+    80,
+    65,
+    67,
+    69,
+    32,
+    84,
+    79,
+    32,
+    83,
+    84,
+    65,
+    82,
+    84
+  ]; // "PRESS SPACE TO START"
+  drawCenterMessage(width, height, label);
+}
+
 function drawGameOver(width: i32, height: i32): void {
   let label: Array<u8> = [71, 65, 77, 69, 32, 79, 86, 69, 82]; // "GAME OVER"
   drawCenterMessage(width, height, label);
+
+  /*
+  let monitorWidth = 80;
+  let monitorHeight = 50;
+  let standWidth = 6;
+  let standHeight = 15;
+  let baseWidth = 20;
+  let baseHeight = 2;
+  let offsetX = (width - monitorWidth) / 2;
+  let offsetY = 20; // (height - monitorHeight - standHeight) / 2;
+  drawBorderedRect(
+    width,
+    offsetX,
+    offsetY,
+    monitorWidth,
+    monitorHeight,
+    BACKGROUND_COLOR,
+    PIPE_BLOCKED_BORDER
+  );
+  drawRect(
+    width,
+    offsetX + (monitorWidth - standWidth) / 2,
+    offsetY + monitorHeight,
+    standWidth,
+    standHeight,
+    PIPE_BLOCKED_BORDER
+  );
+  drawRect(
+    width,
+    offsetX + (monitorWidth - baseWidth) / 2,
+    offsetY + monitorHeight + standHeight,
+    baseWidth,
+    baseHeight,
+    PIPE_BLOCKED_BORDER
+  );
+  drawRect(width, offsetX + (monitorWidth - 5), offsetY + monitorHeight - 1, 2, 1, 0xfff27a30);
+
+  let mugWidth = 30;
+  let mugHeight = 35;
+  let white = 0xffffffff;
+  let mugX = offsetX + (monitorWidth - mugWidth) / 2;
+  let mugY = offsetY + (monitorHeight - mugHeight) / 2;
+  let labelBgOffset = 3;
+  let pbcupOffset = 3;
+  drawRect(width, mugX, mugY, mugWidth, mugHeight, white);
+  drawRect(width, mugX, mugY + labelBgOffset, mugWidth, mugHeight - labelBgOffset * 2, 0xff0072d8);
+  drawRect(
+    width,
+    mugX + pbcupOffset,
+    mugY + mugHeight - labelBgOffset - pbcupOffset * 2,
+    mugWidth - pbcupOffset * 2,
+    pbcupOffset,
+    0xff28445e
+  );
+
+  let handleWidth = 5;
+  let handleOffset = 3;
+  let handleHeight = mugHeight - handleOffset * 2;
+  drawRect(
+    width,
+    mugX + mugWidth + handleOffset,
+    mugY + handleOffset,
+    handleWidth,
+    handleHeight,
+    white
+  );
+  drawRect(width, mugX + mugWidth, mugY + handleOffset, handleOffset, handleWidth, white);
+  drawRect(
+    width,
+    mugX + mugWidth,
+    mugY + mugHeight - handleOffset - handleWidth,
+    handleOffset,
+    handleWidth,
+    white
+  );
+
+  let text: Array<u8> = [82, 69, 69, 83, 69, 83];
+  let textBufferOffset = getPixelOffset(PIPE_SIZE, 0, BUFFER_WIDTH);
+  drawTextOffset(
+    BUFFER_WIDTH,
+    getBufferOffset() + textBufferOffset + pbcupOffset * PIXEL_SIZE,
+    text,
+    0xff0ad6e7,
+    2
+  );
+  clipRectAlpha(
+    PIPE_SIZE,
+    0,
+    mugWidth,
+    FONT_HEIGHT * 2,
+    mugX,
+    mugY + labelBgOffset + 7,
+    width,
+    255
+  );
+  */
+}
+
+function drawBorderedRect(
+  width: i32,
+  offsetX: i32,
+  offsetY: i32,
+  sizeX: i32,
+  sizeY: i32,
+  backgroundColor: i32,
+  borderColor: i32
+): void {
+  drawRect(width, offsetX, offsetY, sizeX, sizeY, borderColor);
+  drawRect(width, offsetX + 1, offsetY + 1, sizeX - 2, sizeY - 2, backgroundColor);
 }
 
 function drawWin(width: i32, height: i32): void {
@@ -521,8 +726,55 @@ function bounceMessage(
   drawText(width, newPixelX, pixelY, text, WINDOW_BORDER_COLOR);
 }
 
-function drawText(width: i32, startX: i32, startY: i32, text: Array<u8>, color: i32): void {
+function drawText(
+  width: i32,
+  startX: i32,
+  startY: i32,
+  text: Array<u8>,
+  color: i32,
+  scale: i32 = 1
+): void {
+  let baseOffset = getCanvasOffset() + getPixelOffset(startX, startY, width);
+  drawTextOffset(width, baseOffset, text, color, scale);
+}
+
+function drawTextOffset(
+  width: i32,
+  baseOffset: i32,
+  text: Array<u8>,
+  color: i32,
+  scale: i32 = 1
+): void {
   for (let i = 0; i < text.length; i++) {
-    drawChar(text[i], width, startX + i * 4, startY, color);
+    drawCharOffset(text[i], width, baseOffset + i * 4 * PIXEL_SIZE * scale, color, scale);
   }
+}
+
+function drawNumber(width: i32, startX: i32, startY: i32, number: i32, color: i32): void {
+  let i = countDigit(number) - 1;
+
+  if (number < 0) {
+    drawChar(45, width, startX, startY, color); // Add negative sign to beginning
+  }
+
+  if (number < 0) number *= -1;
+
+  do {
+    let digit = number % 10;
+    drawChar(digitToCharCode(<u8>digit), width, startX + i * 4, startY, color);
+    i--;
+  } while ((number /= 10));
+}
+
+function digitToCharCode(digit: u8): u8 {
+  return 48 + digit;
+}
+
+function countDigit(n: i32): i32 {
+  let count = n < 0 ? 1 : 0;
+  while (n != 0) {
+    n = n / 10;
+    ++count;
+  }
+  return count === 0 ? 1 : count;
 }

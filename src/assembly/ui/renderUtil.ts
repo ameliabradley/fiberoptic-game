@@ -3,7 +3,7 @@
  * Contains only pure functions
  */
 
-const PIXEL_SIZE = sizeof<i32>();
+export const PIXEL_SIZE = sizeof<i32>();
 
 export function getPos(color: i32, pos: i32): f32 {
   let offset = 24 - pos * 8;

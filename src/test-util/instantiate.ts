@@ -22,7 +22,11 @@ export const instantiate = async () => {
       }
     },
     tools: {
-      time: () => Math.floor(new Date().getTime())
+      time: () => Math.floor(new Date().getTime()),
+      seti() {},
+      geti() {
+        return 0;
+      }
     }
   });
 
