@@ -244,6 +244,18 @@ export function render(width: i32, height: i32, time: i32): void {
     if (time % 2000 < 1000) {
       drawPressSpace(width, height);
     }
+
+    // SPACE TO PLACE CABLE
+    // prettier-ignore
+    let instructionsText: Array<u8> = [ 83, 80, 65, 67, 69, 32, 84, 79, 32, 80, 76, 65, 67, 69, 32, 67, 65, 66, 76, 69 ];
+    let instructionsTextX = (width - instructionsText.length * 4) / 2;
+    drawText(width, instructionsTextX, height - 50, instructionsText, PIPE_INSIDE_COLOR);
+
+    // ARROW KEYS TO MOVE
+    // prettier-ignore
+    let instructionsText2: Array<u8> = [ 65, 82, 82, 79, 87, 32, 75, 69, 89, 83, 32, 84, 79, 32, 77, 79, 86, 69 ];
+    let instructionsText2X = (width - instructionsText2.length * 4) / 2;
+    drawText(width, instructionsText2X, height - 40, instructionsText2, PIPE_INSIDE_COLOR);
     return;
   }
 
