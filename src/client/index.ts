@@ -3,9 +3,12 @@ import * as Keyboard from "../shared/keyboard";
 "use strict";
 
 // Set up the canvas with a 2D rendering context
-var cnv = document.getElementsByTagName("canvas")[0];
+let canvases = document.getElementsByTagName("canvas");
+var cnv = canvases[0];
+var bg = canvases[1];
 
 var ctx = cnv.getContext("2d");
+var ctxbg = bg.getContext("2d");
 let width: number;
 let height: number;
 let canvasByteSize: number;
@@ -17,8 +20,8 @@ function updateSize() {
   width = 240;
   height = 200;
 
-  cnv.width = width;
-  cnv.height = height;
+  bg.width = cnv.width = width;
+  bg.height = cnv.height = height;
 
   ctx.imageSmoothingEnabled = false;
 
@@ -103,7 +106,8 @@ function playTone(freq: number, wave: string) {
 }
 */
 
-fetch(window.location.hostname === "127.0.0.1" ? "module.untouched.wasm" : "module.optimized.wasm")
+// fetch(window.location.hostname === "127.0.0.1" ? "module.untouched.wasm" : "module.optimized.wasm")
+fetch("module.optimized.wasm")
   .then(response => response.arrayBuffer())
   .then(bytes =>
     WebAssembly.instantiate(bytes, {
@@ -132,5 +136,6 @@ fetch(window.location.hostname === "127.0.0.1" ? "module.untouched.wasm" : "modu
       wasmExports.step(width, height, Math.floor(performance.now()));
       argb.set(mem.subarray(0, size)); // copy output to image buffer
       ctx.putImageData(imageData, 0, 0); // apply image buffer
+      ctxbg.putImageData(imageData, 0, 0); // apply image buffer
     })();
   });
