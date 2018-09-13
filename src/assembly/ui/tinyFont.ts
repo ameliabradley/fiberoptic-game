@@ -10,6 +10,7 @@ export const LETTER_6: u16 = 0b0111101111001111;
 export const LETTER_7: u16 = 0b0100100100100111;
 export const LETTER_8: u16 = 0b0111101111101111;
 export const LETTER_9: u16 = 0b0111100111101111;
+export const LETTER_DASH: u16 = 0b0000000111000000;
 export const LETTER_A: u16 = 0b0101111101101010;
 export const LETTER_B: u16 = 0b0011101111101011;
 export const LETTER_C: u16 = 0b0111001001001111;
@@ -40,6 +41,8 @@ export const LETTER_SPACE: u16 = 0b0000000000000000;
 
 export function getLetterFromChar(char: i32): i32 {
   switch (char) {
+    case 45:
+      return LETTER_DASH;
     case 48:
       return LETTER_0;
     case 49:

@@ -1,4 +1,4 @@
-import { World } from "../baseGame/game";
+import { World, getHighScore } from "../baseGame/game";
 import * as Shape from "../baseGame/shape";
 import * as Pipe from "../baseGame/pipe";
 import * as Queue from "../baseGame/queue";
@@ -39,6 +39,12 @@ const FONT_HEIGHT = 5;
 const WINDOW_BORDER_COLOR = 0xff26323a;
 
 const FRIENDLY_MESSAGE_TIMEOUT = 1000 * 5;
+
+@unmanaged
+class RenderState {
+  static lastQueueSignature: i32 = 0;
+  static lastQueueSignatureCaptureTime: i32 = 0;
+}
 
 function renderPipe(offset: i32, width: i32, pipeShape: i32, flags: i32 = 0): void {
   let onlyShape: i8 = (pipeShape as u8) & 0b1111;
@@ -221,6 +227,26 @@ export function render(width: i32, height: i32, time: i32): void {
 
   drawRect(width, 0, 0, width, height, BACKGROUND_COLOR);
 
+  if (World.showingStartScreen) {
+    let startX = 35;
+    let startY = 50;
+
+    let logoText: Array<u8> = [70, 73, 66, 69, 82, 32, 79, 80, 84, 73, 67]; // FIBER OPTIC
+    drawText(width, startX + 2, startY + 2, logoText, 0xff222222, 4);
+    drawText(width, startX, startY, logoText, PIPE_INSIDE_COLOR, 4);
+
+    let highScore = getHighScore();
+    let digits = countDigit(highScore) - 1;
+    let highScoreText: Array<u8> = [72, 73, 71, 72, 32, 83, 67, 79, 82, 69]; // HIGH SCORE
+    drawText(width, startX, startY + 30, highScoreText, PIPE_INSIDE_COLOR);
+    drawNumber(width, width - digits * 4 - 35, startY + 30, highScore, PIPE_INSIDE_COLOR);
+
+    if (time % 2000 < 1000) {
+      drawPressSpace(width, height);
+    }
+    return;
+  }
+
   for (let x = 0; x < sizeX; x++) {
     for (let y = 0; y < sizeY; y++) {
       let index = Pipe.getIndex(x, y, World.gridSizeX);
@@ -347,6 +373,7 @@ export function render(width: i32, height: i32, time: i32): void {
   drawQueue(width, time);
   drawCursor(width, height, time);
   drawProgressBar(width, height, time);
+  drawScore(width, height, time);
 
   if (World.gameOver) {
     drawGameOver(width, height);
@@ -383,26 +410,25 @@ function drawCursor(width: i32, height: i32, time: i32): void {
   );
 }
 
-let lastQueueSignature: i32 = 0;
-let lastQueueSignatureCaptureTime: i32 = 0;
 function drawQueue(width: i32, time: i32): void {
   drawRect(width, 0, 3, PIPE_SIZE + 2, PIPE_SIZE * Queue.MAX + 2, WINDOW_BORDER_COLOR);
   drawRect(width, 1, 4, PIPE_SIZE, PIPE_SIZE * Queue.MAX, BACKGROUND_COLOR);
 
   let queueSignature: i32 = Queue.getQueueId();
 
-  if (queueSignature !== lastQueueSignature) {
-    lastQueueSignature = queueSignature;
-    lastQueueSignatureCaptureTime = time;
+  if (queueSignature !== RenderState.lastQueueSignature) {
+    RenderState.lastQueueSignature = queueSignature;
+    RenderState.lastQueueSignatureCaptureTime = time;
   }
 
   let offset: i32 = 0;
   let timeout = 1000 * 1;
-  let maxTime = lastQueueSignatureCaptureTime + timeout;
+  let maxTime = RenderState.lastQueueSignatureCaptureTime + timeout;
   if (time < maxTime) {
     offset =
       <i32>(
-        (<f32>PIPE_SIZE * easeBounceOut(<f32>(time - lastQueueSignatureCaptureTime) / <f32>timeout))
+        (<f32>PIPE_SIZE *
+          easeBounceOut(<f32>(time - RenderState.lastQueueSignatureCaptureTime) / <f32>timeout))
       ) - PIPE_SIZE;
   }
 
@@ -424,9 +450,14 @@ function drawQueue(width: i32, time: i32): void {
 }
 
 function drawProgressBar(width: i32, height: i32, time: i32): void {
-  let fullProgressWidth: i32 = width;
-  let y = height - PROGRESSBAR_HEIGHT;
-  let x = 0;
+  let outsideY = height - PROGRESSBAR_HEIGHT - 5;
+  let outsideX = 0;
+
+  drawRect(width, outsideX, outsideY, width, PROGRESSBAR_HEIGHT + 2, WINDOW_BORDER_COLOR);
+
+  let fullProgressWidth: i32 = width - 2;
+  let x = outsideX + 1;
+  let y = outsideY + 1;
 
   if (World.countdownEnd > time) {
     let percentage: f32 =
@@ -446,7 +477,28 @@ function drawProgressBar(width: i32, height: i32, time: i32): void {
   }
 }
 
-export function drawChar(char: i32, width: i32, offsetX: i32, offsetY: i32, color: i32): void {
+function drawScore(width: i32, height: i32, time: i32): void {
+  // drawRect(width, 0, 3, PIPE_SIZE + 2, PIPE_SIZE * Queue.MAX + 2, WINDOW_BORDER_COLOR);
+  // drawRect(width, 1, 4, PIPE_SIZE, PIPE_SIZE * Queue.MAX, BACKGROUND_COLOR);
+
+  let queueLabel: Array<u8> = [83, 67, 79, 82, 69]; // SCORE
+  let startX = 2;
+  let startY = PIPE_SIZE * Queue.MAX + 18;
+  drawText(width, startX, startY, queueLabel, WINDOW_BORDER_COLOR);
+
+  let digits = countDigit(World.score) - 1;
+  let locX = (PIPE_SIZE - digits * 4) / 2;
+  drawNumber(width, locX, startY + 6, World.score, PIPE_INSIDE_COLOR);
+}
+
+export function drawChar(
+  char: i32,
+  width: i32,
+  offsetX: i32,
+  offsetY: i32,
+  color: i32,
+  scale: i32 = 1
+): void {
   let letter = getLetterFromChar(char);
   let shift: i16 = 0;
 
@@ -456,8 +508,9 @@ export function drawChar(char: i32, width: i32, offsetX: i32, offsetY: i32, colo
     for (let x = 0; x < 3; x++) {
       let on = letter & (1 << shift);
       if (on) {
-        let offset = baseOffset + getPixelOffset(x, y, width);
-        renderPixel(offset, color);
+        let offset = baseOffset + getPixelOffset(x * scale, y * scale, width);
+        // renderPixel(offset, color);
+        drawRectOffset(width, offset, scale, scale, color);
       }
       shift++;
     }
@@ -470,6 +523,32 @@ function getBufferOffset(): i32 {
 
 export function getCanvasOffset(): i32 {
   return World.OFFSET_RENDERER + BUFFER_SIZE;
+}
+
+function drawPressSpace(width: i32, height: i32): void {
+  let label: Array<u8> = [
+    80,
+    82,
+    69,
+    83,
+    83,
+    32,
+    83,
+    80,
+    65,
+    67,
+    69,
+    32,
+    84,
+    79,
+    32,
+    83,
+    84,
+    65,
+    82,
+    84
+  ]; // "PRESS SPACE TO START"
+  drawCenterMessage(width, height, label);
 }
 
 function drawGameOver(width: i32, height: i32): void {
@@ -521,8 +600,44 @@ function bounceMessage(
   drawText(width, newPixelX, pixelY, text, WINDOW_BORDER_COLOR);
 }
 
-function drawText(width: i32, startX: i32, startY: i32, text: Array<u8>, color: i32): void {
+function drawText(
+  width: i32,
+  startX: i32,
+  startY: i32,
+  text: Array<u8>,
+  color: i32,
+  scale: i32 = 1
+): void {
   for (let i = 0; i < text.length; i++) {
-    drawChar(text[i], width, startX + i * 4, startY, color);
+    drawChar(text[i], width, startX + i * 4 * scale, startY, color, scale);
   }
+}
+
+function drawNumber(width: i32, startX: i32, startY: i32, number: i32, color: i32): void {
+  let i = countDigit(number) - 1;
+
+  if (number < 0) {
+    drawChar(45, width, startX, startY, color);
+  }
+
+  if (number < 0) number *= -1;
+
+  do {
+    let digit = number % 10;
+    drawChar(digitToCharCode(<u8>digit), width, startX + i * 4, startY, color);
+    i--;
+  } while ((number /= 10));
+}
+
+function digitToCharCode(digit: u8): u8 {
+  return 48 + digit;
+}
+
+function countDigit(n: i32): i32 {
+  let count = n < 0 ? 1 : 0;
+  while (n != 0) {
+    n = n / 10;
+    ++count;
+  }
+  return count === 0 ? 1 : count;
 }

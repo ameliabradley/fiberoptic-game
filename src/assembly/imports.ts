@@ -6,6 +6,8 @@ declare namespace console {
 
 declare namespace tools {
   function time(): i32;
+  function seti(key: i32, val: i32): void;
+  function geti(key: i32): i32;
 }
 
 export function logi(val: i32): void {
@@ -18,4 +20,12 @@ export function logf(val: f32): void {
 
 export function getTime(): i32 {
   return tools.time();
+}
+
+export function saveNumber(key: i32, val: i32): void {
+  tools.seti(key, val);
+}
+
+export function fetchSavedNumber(key: i32): i32 {
+  return tools.geti(key);
 }

@@ -2,7 +2,7 @@ import * as Pipe from "./pipe";
 import * as Shape from "./shape";
 import * as Queue from "./queue";
 import * as Keys from "../../shared/keyboard";
-import { getTime, logi } from "../imports";
+import { getTime, logi, saveNumber, fetchSavedNumber } from "../imports";
 import { generateRandomMap } from "../map/randomGenerator";
 
 export type Time = i32;
@@ -24,6 +24,7 @@ export class World {
   static readonly countdownTotal: i32 = FLOW_STARTS_AFTER;
   static gameOver: boolean = false;
   static gameResetTimeout: i32 = 0;
+  static showingStartScreen: bool = true;
 
   static flowMultiplier: i32 = 1;
   static isWinning: bool = false;
@@ -31,6 +32,9 @@ export class World {
   static OFFSET_PIPE_ARRAY: usize = HEAP_BASE;
   static OFFSET_QUEUE_ARRAY: usize;
   static OFFSET_RENDERER: usize;
+
+  // Game options
+  static score: i32 = 0;
 }
 
 export function setupWorld(sizeX: i32, sizeY: i32): void {
@@ -63,6 +67,14 @@ export function getHeapBase(): usize {
 }
 
 export function setKeys(char: i8): void {
+  if (World.showingStartScreen) {
+    if ((char & Keys.FLAG_SPACE) > 0) {
+      World.showingStartScreen = false;
+      restart();
+    }
+    return;
+  }
+
   let y = World.cursorPositionY + (char & Keys.FLAG_DOWN ? 1 : char & Keys.FLAG_UP ? -1 : 0);
   let x = World.cursorPositionX + (char & Keys.FLAG_RIGHT ? 1 : char & Keys.FLAG_LEFT ? -1 : 0);
 
@@ -78,6 +90,7 @@ export function setKeys(char: i8): void {
         let newShape = Queue.pop();
         Pipe.saveShape(index, newShape);
 
+        updateScore(World.score - 10);
         let winningMove = areAllStartFlowsConnectedToEndFlows();
         if (winningMove) {
           World.flowMultiplier = 8;
@@ -157,6 +170,10 @@ function getInletFromOutlet(outlet: u8): u8 {
 }
 
 export function step(time: i32): void {
+  if (World.showingStartScreen) {
+    return;
+  }
+
   for (let x = 0; x < World.gridSizeX; x++) {
     for (let y = 0; y < World.gridSizeY; y++) {
       let index = Pipe.getIndex(x, y, World.gridSizeX);
@@ -174,6 +191,8 @@ export function step(time: i32): void {
           if (shape > 0 && (inlet & shape) > 0) {
             Pipe.startFlowFrom(index, inlet, time);
 
+            updateScore(World.score + 200);
+
             if (shape & Shape.PIPE_END) {
               World.gameResetTimeout = time + RESTART_GAME_AFTER;
             }
@@ -186,8 +205,28 @@ export function step(time: i32): void {
   }
 
   if (World.gameResetTimeout > 0 && World.gameResetTimeout <= time) {
-    setupWorld(World.gridSizeX, World.gridSizeY);
+    if (World.gameOver) {
+      updateScore(0);
+      World.showingStartScreen = true;
+    }
+    restart();
   }
+}
+
+const SCORE_KEY = 1;
+function updateScore(newScore: i32): void {
+  World.score = newScore;
+  if (fetchSavedNumber(SCORE_KEY) < newScore) {
+    saveNumber(SCORE_KEY, newScore);
+  }
+}
+
+export function getHighScore(): i32 {
+  return fetchSavedNumber(SCORE_KEY);
+}
+
+function restart(): void {
+  setupWorld(World.gridSizeX, World.gridSizeY);
 }
 
 function getBurstX(burst: u8, x: i32): i32 {
